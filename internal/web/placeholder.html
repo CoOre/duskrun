@@ -1,0 +1,59 @@
+<!doctype html>
+<!--
+  Placeholder UI, committed so `go build` works without a Node toolchain.
+
+  It is served in place of the real Vite output (`make ui`, `make release`, or
+  the Docker build), and must stay free of script and stylesheet tags. The
+  bundle filenames Vite emits are hashed and generated, so a committed page
+  pointing at them produces a binary serving a document whose scripts are
+  missing. That failure is invisible: the browser cannot execute the document
+  and renders nothing, with no error anywhere the operator would look.
+-->
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Duskrun — интерфейс не собран</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #14161a;
+        color: #e6e8eb;
+        font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main { max-width: 34rem; padding: 2rem; }
+      h1 { font-size: 1.25rem; margin: 0 0 0.75rem; }
+      p { margin: 0 0 0.75rem; color: #a8b0ba; }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #1e2228;
+        border-radius: 4px;
+        padding: 0.1em 0.4em;
+        color: #e6e8eb;
+      }
+      a { color: #7aa2f7; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Интерфейс не собран</h1>
+      <p>
+        Этот бинарник собран без веб-интерфейса: в него встроена заглушка, а не
+        SPA. API и <code>/healthz</code> при этом работают штатно.
+      </p>
+      <p>
+        Соберите интерфейс и пересоберите бинарник — <code>make release</code>,
+        либо <code>make ui</code> и затем <code>make build</code>. Образ Docker
+        собирает SPA сам, отдельных шагов не требует.
+      </p>
+      <p>
+        Проверить, что демон жив, можно так:
+        <code>curl -s localhost:8080/healthz</code>.
+      </p>
+    </main>
+  </body>
+</html>

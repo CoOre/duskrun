@@ -1,0 +1,45 @@
+version: 2
+
+# Обновления группируются, чтобы не получать по PR на каждую библиотеку.
+# Префиксы — conventional commits: fix(deps) для кода, который попадает в
+# бинарник или образ (release-please выпустит патч), chore(deps) для остального.
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: fix(deps)
+    groups:
+      go:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: fix(deps)
+      prefix-development: chore(deps)
+    groups:
+      web-runtime:
+        dependency-type: production
+      web-dev:
+        dependency-type: development
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: fix(deps)
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci(deps)
+    groups:
+      actions:
+        patterns: ["*"]
