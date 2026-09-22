@@ -1,0 +1,11 @@
+.git
+bin/
+dist/
+web/node_modules
+internal/web/dist/
+*.db
+*.db-wal
+*.db-shm
+.env
+run-*.log
+.DS_Store

@@ -1,0 +1,111 @@
+/*
+ * Design tokens ported from the Dashboard.dc design mock. Dark is the default
+ * palette (:root); [data-theme="light"] overrides it. When the user has not
+ * chosen a theme, prefers-color-scheme decides.
+ */
+:root,
+:root[data-theme='dark'] {
+  --app: oklch(0.15 0.008 260);
+  --sidebar: oklch(0.125 0.008 260);
+  --topbar: oklch(0.155 0.008 260);
+  --panel: oklch(0.185 0.01 260);
+  --panel-2: oklch(0.215 0.012 260);
+  --line: oklch(0.245 0.01 260);
+  --line-2: oklch(0.31 0.012 260);
+  --ink: oklch(0.96 0.005 260);
+  --ink-2: oklch(0.7 0.01 260);
+  --ink-3: oklch(0.52 0.01 260);
+  --accent: oklch(0.62 0.16 258);
+  --accent-ink: oklch(0.99 0.01 258);
+  --ok: oklch(0.76 0.14 155);
+  --ok-bg: oklch(0.31 0.06 155);
+  --err: oklch(0.72 0.18 25);
+  --err-bg: oklch(0.31 0.09 25);
+  --warn: oklch(0.8 0.13 75);
+  --warn-bg: oklch(0.22 0.03 75);
+  --run: oklch(0.73 0.14 258);
+  --run-bg: oklch(0.31 0.07 258);
+  --skip: oklch(0.68 0.015 260);
+  --skip-bg: oklch(0.27 0.01 260);
+  --eng-postgres: oklch(0.65 0.14 258);
+  --eng-mysql: oklch(0.74 0.13 65);
+  --eng-mssql: oklch(0.68 0.15 25);
+  --eng-redis: oklch(0.68 0.16 12);
+  --overlay: oklch(0.08 0.01 260 / 0.62);
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+}
+
+:root[data-theme='light'] {
+  --app: oklch(0.975 0.003 260);
+  --sidebar: oklch(0.955 0.004 260);
+  --topbar: oklch(0.99 0.002 260);
+  --panel: oklch(1 0 0);
+  --panel-2: oklch(0.965 0.004 260);
+  --line: oklch(0.905 0.006 260);
+  --line-2: oklch(0.83 0.008 260);
+  --ink: oklch(0.24 0.012 260);
+  --ink-2: oklch(0.46 0.012 260);
+  --ink-3: oklch(0.6 0.01 260);
+  --accent: oklch(0.54 0.17 258);
+  --accent-ink: oklch(0.99 0.01 258);
+  --ok: oklch(0.52 0.13 155);
+  --ok-bg: oklch(0.93 0.05 155);
+  --err: oklch(0.55 0.19 25);
+  --err-bg: oklch(0.94 0.05 25);
+  --warn: oklch(0.58 0.12 65);
+  --warn-bg: oklch(0.96 0.055 80);
+  --run: oklch(0.54 0.16 258);
+  --run-bg: oklch(0.93 0.05 258);
+  --skip: oklch(0.55 0.02 260);
+  --skip-bg: oklch(0.92 0.005 260);
+  --eng-postgres: oklch(0.52 0.15 258);
+  --eng-mysql: oklch(0.58 0.13 65);
+  --eng-mssql: oklch(0.55 0.18 25);
+  --eng-redis: oklch(0.55 0.19 12);
+  --overlay: oklch(0.4 0.01 260 / 0.35);
+}
+
+/* No explicit choice yet: follow the OS, but default to dark. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --app: oklch(0.975 0.003 260);
+    --sidebar: oklch(0.955 0.004 260);
+    --topbar: oklch(0.99 0.002 260);
+    --panel: oklch(1 0 0);
+    --panel-2: oklch(0.965 0.004 260);
+    --line: oklch(0.905 0.006 260);
+    --line-2: oklch(0.83 0.008 260);
+    --ink: oklch(0.24 0.012 260);
+    --ink-2: oklch(0.46 0.012 260);
+    --ink-3: oklch(0.6 0.01 260);
+    --accent: oklch(0.54 0.17 258);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--app);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.2s;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+input::placeholder {
+  color: var(--ink-3);
+}

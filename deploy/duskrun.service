@@ -1,0 +1,25 @@
+[Unit]
+Description=Duskrun self-hosted database backup daemon
+Documentation=https://github.com/duskrun/duskrun
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=duskrun
+Group=duskrun
+# Provide DUSKRUN_MASTER_KEY, DUSKRUN_API_TOKEN, DUSKRUN_DB_PATH, etc. here.
+EnvironmentFile=/etc/duskrun/duskrun.env
+ExecStart=/usr/local/bin/duskrun serve
+Restart=on-failure
+RestartSec=5
+WorkingDirectory=/var/lib/duskrun
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
