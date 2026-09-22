@@ -22,7 +22,7 @@ COPY web ./web
 # Vite writes to ../internal/web/dist → /app/internal/web/dist.
 RUN cd web && npm run build
 
-FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
