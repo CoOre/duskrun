@@ -13,7 +13,7 @@
 # and cross-compile: the SPA is platform-independent and Go needs only GOARCH.
 # Only the runtime stage runs per target platform, so a multi-arch build does
 # not compile Go under QEMU emulation.
-FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS webbuild
+FROM --platform=$BUILDPLATFORM node:26-bookworm-slim AS webbuild
 WORKDIR /app
 # Install deps against the lockfile first for layer caching.
 COPY web/package.json web/package-lock.json ./web/
