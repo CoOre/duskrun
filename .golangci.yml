@@ -1,0 +1,38 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # standard = errcheck, govet, ineffassign, staticcheck, unused.
+  default: standard
+  enable:
+    - bodyclose     # незакрытое тело HTTP-ответа — утечка соединения
+    - errorlint     # сравнение ошибок через ==/type switch вместо errors.Is/As
+    - misspell
+    - nolintlint    # //nolint только с указанием линтера и причины
+    - unconvert
+  settings:
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+  exclusions:
+    generated: lax
+    presets:
+      # Неиспользованные ошибки Close/Flush/Fprint* и т.п. — принятая идиома
+      # для defer и путей, где ошибка уже есть.
+      - std-error-handling
+    rules:
+      # В тестах тело ответа закрывают хелперы (decode*), bodyclose этого не
+      # видит и шумит на каждом вызове.
+      - path: _test\.go
+        linters: [bodyclose]
+      # s3/manager помечен deprecated в пользу feature/s3/transfermanager.
+      # Переезд — отдельная задача, а не условие зелёного CI.
+      - path: internal/storage/s3/
+        linters: [staticcheck]
+        text: "SA1019: .*s3/manager"
+
+formatters:
+  enable:
+    - gofmt

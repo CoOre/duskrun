@@ -1,0 +1,217 @@
+# Duskrun — self-hosted database backup.
+#
+# Usage:
+#   Production-like (just the app; point it at your own DBs / S3):
+#       cp .env.example .env   # then edit secrets
+#       docker compose up -d duskrun
+#
+#   Full local demo (app + sample Postgres/MySQL + MinIO S3 + bucket init):
+#       docker compose --profile demo up -d
+#
+# The `demo` services exist only to exercise Duskrun end-to-end locally; the
+# default `up` starts nothing but `duskrun`, so real deployments stay lean.
+
+name: duskrun
+
+services:
+  duskrun:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Stamped into the binary; reported by `duskrun version` and the
+        # settings page. Set DUSKRUN_VERSION in .env (or the environment) to
+        # label a build — otherwise the image honestly says "unknown".
+        VERSION: "${DUSKRUN_VERSION:-unknown}"
+    image: duskrun:local
+    restart: unless-stopped
+    ports:
+      - "${DUSKRUN_PORT:-8080}:8080"
+    environment:
+      DUSKRUN_LISTEN: ":8080"
+      DUSKRUN_DB_PATH: "/var/lib/duskrun/duskrun.db"
+      DUSKRUN_WORKERS: "${DUSKRUN_WORKERS:-4}"
+      DUSKRUN_LOG_FORMAT: "${DUSKRUN_LOG_FORMAT:-json}"
+      DUSKRUN_API_TOKEN: "${DUSKRUN_API_TOKEN:?set DUSKRUN_API_TOKEN in .env}"
+      DUSKRUN_TRUSTED_PROXY: "${DUSKRUN_TRUSTED_PROXY:-false}"
+      # Master key: inline from .env (simple) OR mount a file and use
+      # DUSKRUN_MASTER_KEY_FILE instead (see the commented secret below).
+      DUSKRUN_MASTER_KEY: "${DUSKRUN_MASTER_KEY:?set DUSKRUN_MASTER_KEY in .env}"
+    volumes:
+      - duskrun-data:/var/lib/duskrun          # SQLite metadata DB + known_hosts
+      - duskrun-backups:/backups               # local-FS storage target (storage.type=localfs, root=/backups)
+    # The runtime image ships no curl/wget, so we liveness-check the binary
+    # itself. Readiness of the HTTP API is observable at GET /healthz.
+    healthcheck:
+      test: ["CMD", "duskrun", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    # To use a master-key FILE instead of an env var, drop DUSKRUN_MASTER_KEY
+    # above, add DUSKRUN_MASTER_KEY_FILE: /run/secrets/master_key, and uncomment:
+    # secrets:
+    #   - master_key
+
+  # ---------------------------------------------------------------------------
+  # demo profile — local backup targets to try Duskrun against. Not for prod.
+  # ---------------------------------------------------------------------------
+  postgres:
+    profiles: ["demo"]
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${DEMO_PG_USER:-backup}"
+      POSTGRES_PASSWORD: "${DEMO_PG_PASSWORD:-backup}"
+      POSTGRES_DB: "${DEMO_PG_DB:-orders_db}"
+    ports:
+      - "${DEMO_PG_PORT:-5432}:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DEMO_PG_USER:-backup} -d ${DEMO_PG_DB:-orders_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    profiles: ["demo"]
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DEMO_MYSQL_ROOT_PASSWORD:-rootpw}"
+      MYSQL_USER: "${DEMO_MYSQL_USER:-backup}"
+      MYSQL_PASSWORD: "${DEMO_MYSQL_PASSWORD:-backup}"
+      MYSQL_DATABASE: "${DEMO_MYSQL_DB:-analytics_db}"
+    ports:
+      - "${DEMO_MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DEMO_MYSQL_ROOT_PASSWORD:-rootpw}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    profiles: ["demo"]
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "${DEMO_MONGO_USER:-backup}"
+      MONGO_INITDB_ROOT_PASSWORD: "${DEMO_MONGO_PASSWORD:-backup}"
+      MONGO_INITDB_DATABASE: "${DEMO_MONGO_DB:-catalog_db}"
+    ports:
+      - "${DEMO_MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # requirepass, not an ACL user: `--rdb` needs a client that may run SYNC, and
+  # the default user with a password is the configuration operators actually run.
+  redis:
+    profiles: ["demo"]
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${DEMO_REDIS_PASSWORD:-backup}", "--save", "60", "1"]
+    ports:
+      - "${DEMO_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${DEMO_REDIS_PASSWORD:-backup} ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Offsite target for the sftp storage. Key auth only, to match the plugin:
+  # put a PUBLIC key into ./demo/sftp/keys/ (any *.pub) and register the matching
+  # PRIVATE key as an `ssh-key` secret in duskrun. With an empty keys directory
+  # the server still starts — it just accepts nobody.
+  sftp:
+    profiles: ["demo"]
+    image: atmoz/sftp:alpine
+    restart: unless-stopped
+    command: ["${DEMO_SFTP_USER:-backup}::::backup"]
+    environment:
+      SFTP_USER: "${DEMO_SFTP_USER:-backup}"
+    ports:
+      - "${DEMO_SFTP_PORT:-2222}:22"
+    volumes:
+      - ./demo/sftp/keys:/home/${DEMO_SFTP_USER:-backup}/.ssh/keys:ro
+      - ./demo/sftp/bootstrap.sh:/etc/sftp.d/10-chown.sh:ro
+      - sftp-data:/home/${DEMO_SFTP_USER:-backup}/backup
+      # Persist the server's host keys: without this every recreate generates new
+      # ones, and duskrun — correctly — refuses the changed key as a possible MITM.
+      - sftp-etc-ssh:/etc/ssh
+
+  minio:
+    profiles: ["demo"]
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "${DEMO_S3_ACCESS_KEY:-minioadmin}"
+      MINIO_ROOT_PASSWORD: "${DEMO_S3_SECRET_KEY:-minioadmin}"
+    ports:
+      - "${DEMO_S3_PORT:-9000}:9000"       # S3 API endpoint → storage.config.endpoint
+      - "${DEMO_S3_CONSOLE_PORT:-9001}:9001" # web console
+    volumes:
+      - minio-data:/data
+
+  # Local SMTP sink for the email notifier: catches every message and shows it
+  # at http://localhost:8025 instead of delivering anywhere.
+  #
+  # Authentication caveat: net/smtp releases a password over an unencrypted
+  # link only to localhost. From inside this network duskrun sees the host as
+  # `mailpit`, so a channel with a login must either use TLS or be configured
+  # with host 127.0.0.1 from a duskrun running on the host machine. Anonymous
+  # sending (no username) works from anywhere.
+  mailpit:
+    profiles: ["demo"]
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    environment:
+      # Without MP_SMTP_AUTH Mailpit advertises no AUTH at all, and without
+      # ALLOW_INSECURE it refuses PLAIN outside TLS — with neither set, a
+      # "wrong password" test would fail for the wrong reason.
+      MP_SMTP_AUTH: "${DEMO_SMTP_USER:-duskrun}:${DEMO_SMTP_PASSWORD:-duskrun}"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+      MP_MAX_MESSAGES: "500"
+    ports:
+      - "${DEMO_SMTP_PORT:-1025}:1025"       # SMTP → notifier config host/port
+      - "${DEMO_SMTP_UI_PORT:-8025}:8025"    # web inbox
+
+  # One-shot: create the backups bucket in MinIO, then exit.
+  createbuckets:
+    profiles: ["demo"]
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 ${DEMO_S3_ACCESS_KEY:-minioadmin} ${DEMO_S3_SECRET_KEY:-minioadmin}; do sleep 1; done;
+      mc mb --ignore-existing local/${DEMO_S3_BUCKET:-backups};
+      echo 'bucket ready: ${DEMO_S3_BUCKET:-backups}';
+      "
+    restart: "no"
+
+volumes:
+  duskrun-data:
+  duskrun-backups:
+  pg-data:
+  mysql-data:
+  mongo-data:
+  redis-data:
+  sftp-data:
+  sftp-etc-ssh:
+  minio-data:
+
+# Uncomment to feed the master key as a file secret instead of an env var:
+# secrets:
+#   master_key:
+#     file: ./secrets/master_key

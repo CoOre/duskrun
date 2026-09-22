@@ -1,0 +1,94 @@
+/*
+ * Interaction/animation layer for the ported design comp. Colors/sizing live
+ * inline on the components (translated 1:1 from the Dashboard.dc design mock);
+ * this file carries what inline styles can't express: keyframes, :hover, :focus,
+ * scrollbars, and native control resets.
+ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 0;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes drawer-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes modal-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dc-fade { animation: fade-in 0.2s ease; }
+.dc-modal-in { animation: modal-in 0.18s ease; }
+.dc-pulse { animation: pulse-dot 2s infinite; }
+.dc-pulse-fast { animation: pulse-dot 1.1s infinite; }
+
+/* Indeterminate progress bar: the pipeline is a single fused stream with no known
+ * total, so a sliding sweep conveys "in motion" without a false percentage. */
+@keyframes bar-slide {
+  0% { left: -35%; }
+  100% { left: 100%; }
+}
+.dc-bar {
+  position: relative;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+.dc-bar > span {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 35%;
+  border-radius: 3px;
+  background: var(--run);
+  animation: bar-slide 1.1s ease-in-out infinite;
+}
+
+/* Native control resets to match the comp. */
+.dc-input,
+.dc-select {
+  outline: none;
+}
+.dc-input:focus,
+.dc-select:focus {
+  border-color: var(--accent) !important;
+}
+.dc-select {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.dc-input::placeholder {
+  color: var(--ink-3);
+}
+
+/* Hover helpers (comp style-hover). */
+.dc-h-panel:hover { background: var(--panel); }
+.dc-h-panel2:hover { background: var(--panel-2); }
+.dc-h-accent:hover { border-color: var(--accent) !important; }
+.dc-h-accent-ink:hover { border-color: var(--accent) !important; color: var(--ink) !important; }
+.dc-h-err:hover { border-color: var(--err) !important; color: var(--err) !important; }
+
+button.dc-reset {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+}

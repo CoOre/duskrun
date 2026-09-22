@@ -1,0 +1,47 @@
+# Бинарники для GitHub Release. Релиз с заметками создаёт release-please,
+# goreleaser только догружает в него архивы и checksums.txt.
+version: 2
+
+project_name: duskrun
+
+before:
+  hooks:
+    # Встраиваемый SPA: без него бинарник отдаёт placeholder.html.
+    - sh -c "cd web && npm ci && npm run build"
+
+builds:
+  - id: duskrun
+    main: ./cmd/duskrun
+    binary: duskrun
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    # {{ .Tag }} (с «v»), как у `git describe` в Makefile и у Docker-образа.
+    ldflags:
+      - -s -w -X main.version={{ .Tag }}
+    # Воспроизводимая сборка: время файлов — время коммита, а не сборки.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot+{{ .ShortCommit }}"
+
+changelog:
+  # CHANGELOG и текст релиза ведёт release-please.
+  disable: true
+
+release:
+  # Релиз уже создан release-please — оставить его заметки как есть.
+  mode: keep-existing
