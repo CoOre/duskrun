@@ -11,6 +11,7 @@ const SECRET_TYPES: { k: string; label: string; sub: string }[] = [
   { k: 'ssh-key', label: 'ssh-key', sub: 'приватный SSH-ключ' },
   { k: 'age-key', label: 'age-key', sub: 'ключ age / x25519' },
   { k: 'smtp-password', label: 'smtp-password', sub: 'пароль SMTP' },
+  { k: 's3-key', label: 's3-key', sub: 'access / secret key S3' },
 ]
 
 const TYPE_COLOR: Record<string, string> = {
@@ -18,6 +19,7 @@ const TYPE_COLOR: Record<string, string> = {
   'ssh-key': 'var(--eng-mysql)',
   'age-key': 'var(--ok)',
   'smtp-password': 'var(--eng-mssql)',
+  's3-key': 'var(--eng-redis)',
 }
 
 function typeColor(t: string): string {

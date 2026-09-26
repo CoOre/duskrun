@@ -14,6 +14,7 @@ const TYPE_COLOR: Record<string, string> = {
   'ssh-key': 'var(--eng-mysql)',
   'age-key': 'var(--ok)',
   'smtp-password': 'var(--eng-mssql)',
+  's3-key': 'var(--eng-redis)',
 }
 
 function typeColor(t: string): string {

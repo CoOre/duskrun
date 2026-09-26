@@ -115,6 +115,12 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
   const [bucket, setBucket] = useState(str(cfg.bucket, ''))
   const [region, setRegion] = useState(str(cfg.region, 'eu-central-1'))
   const [endpoint, setEndpoint] = useState(str(cfg.endpoint, ''))
+  const [prefix, setPrefix] = useState(str(cfg.prefix, ''))
+  const [forcePathStyle, setForcePathStyle] = useState(cfg.force_path_style === true)
+  // Older rows (and the pre-two-picker form) kept the single key under
+  // secret_ref, so fall back to it when the config carries no access_key_ref.
+  const [accessKeyRef, setAccessKeyRef] = useState(str(cfg.access_key_ref) || (initial?.type === 's3' ? initial.secret_ref ?? '' : ''))
+  const [secretKeyRef, setSecretKeyRef] = useState(str(cfg.secret_key_ref, ''))
   const [sftpHost, setSftpHost] = useState(str(cfg.host, ''))
   const [sftpPort, setSftpPort] = useState(String(typeof cfg.port === 'number' ? cfg.port : 22))
   const [sftpUser, setSftpUser] = useState(str(cfg.user, ''))
@@ -129,12 +135,18 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
 
   function buildConfig(): Record<string, unknown> {
     if (type === 'localfs') return { root: root.trim() }
+    // access_key_ref/secret_key_ref are what the plugin reads; the core
+    // substitutes the two values under access_key/secret_key before the plugin
+    // is built, and s3 rejects one without the other.
     if (type === 's3') {
       return {
         bucket: bucket.trim(),
         region: region.trim() || 'us-east-1',
         endpoint: endpoint.trim() || undefined,
-        access_key_ref: secretRef.trim() || undefined,
+        prefix: prefix.trim() || undefined,
+        force_path_style: forcePathStyle,
+        access_key_ref: accessKeyRef.trim() || undefined,
+        secret_key_ref: secretKeyRef.trim() || undefined,
       }
     }
     // private_key_ref is what the plugin reads; the core substitutes the key
@@ -152,7 +164,14 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
   function validate(): string | null {
     if (!name.trim()) return 'Укажите название'
     if (type === 'localfs' && !root.trim()) return 'Укажите путь'
-    if (type === 's3' && !bucket.trim()) return 'Укажите bucket'
+    if (type === 's3') {
+      if (!bucket.trim()) return 'Укажите bucket'
+      // Mirrors the plugin's rule: one key alone is a misconfiguration, and
+      // leaving both empty means the AWS default chain (env, IAM role).
+      if (Boolean(accessKeyRef.trim()) !== Boolean(secretKeyRef.trim())) {
+        return 'Access key и Secret key указываются вместе'
+      }
+    }
     if (type === 'sftp') {
       if (!sftpHost.trim()) return 'Укажите хост'
       if (!sftpUser.trim()) return 'Укажите пользователя'
@@ -179,7 +198,9 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
         name: name.trim(),
         type,
         config: buildConfig(),
-        secret_ref: secretRef.trim() || undefined,
+        // secret_ref is metadata for the listing; s3 keeps its two refs in the
+        // config, so the access key is what names the row.
+        secret_ref: (type === 's3' ? accessKeyRef : secretRef).trim() || undefined,
       }
       if (initial) await api.updateStorage(initial.id, body)
       else await api.createStorage(body)
@@ -234,12 +255,30 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
                   <input id="s-region" className="dc-input" style={inputStyle} value={region} onChange={(e) => setRegion(e.target.value)} placeholder="eu-central-1" />
                 </div>
               </div>
-              <div style={{ marginBottom: 14 }}>
-                <label style={labelStyle} htmlFor="s-endpoint">Endpoint (опц.)</label>
-                <input id="s-endpoint" className="dc-input" style={inputStyle} value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder="https://s3.amazonaws.com" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                <div>
+                  <label style={labelStyle} htmlFor="s-endpoint">Endpoint (опц.)</label>
+                  <input id="s-endpoint" className="dc-input" style={inputStyle} value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder="https://s3.amazonaws.com" />
+                </div>
+                <div>
+                  <label style={labelStyle} htmlFor="s-prefix">Префикс (опц.)</label>
+                  <input id="s-prefix" className="dc-input" style={inputStyle} value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="duskrun/prod" />
+                </div>
               </div>
-              <div>
-                <SecretPicker id="s-secret" label="Ключи доступа (из секретов)" value={secretRef} onChange={setSecretRef} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                <div>
+                  <SecretPicker id="s-access-key" label="Access key" value={accessKeyRef} onChange={setAccessKeyRef} types={['s3-key']} newSecretType="s3-key" />
+                </div>
+                <div>
+                  <SecretPicker id="s-secret-key" label="Secret key" value={secretKeyRef} onChange={setSecretKeyRef} types={['s3-key']} newSecretType="s3-key" />
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--ink-2)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={forcePathStyle} onChange={(e) => setForcePathStyle(e.target.checked)} />
+                path-style адресация (нужна MinIO и большинству S3-совместимых)
+              </label>
+              <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 8 }}>
+                Оба ключа пусты — используется стандартная цепочка AWS (переменные окружения, IAM-роль).
               </div>
             </>
           )}

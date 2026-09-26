@@ -319,7 +319,7 @@ type Setting struct {
 type Secret struct {
 	ID         int64
 	Name       string
-	Type       string // "db-password" | "ssh-key" | "age-key" | "smtp-password"
+	Type       string // "db-password" | "ssh-key" | "age-key" | "smtp-password" | "s3-key"
 	Ciphertext []byte
 	KeyID      string // master key version that wrapped this secret's DEK
 	CreatedAt  time.Time
