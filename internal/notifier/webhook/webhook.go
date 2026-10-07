@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 func init() {

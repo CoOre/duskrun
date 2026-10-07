@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 
 	// The write path validates the connector and storage types against the
 	// plugin registry, so the tests must link the same plugins the daemon does.
 	// Without these, "unknown connector type" would mask the leak under test.
-	_ "github.com/duskrun/duskrun/internal/connector/sshtunnel"
-	_ "github.com/duskrun/duskrun/internal/storage/s3"
+	_ "github.com/CoOre/duskrun/internal/connector/sshtunnel"
+	_ "github.com/CoOre/duskrun/internal/storage/s3"
 )
 
 // readAll drains a response body into a string for substring assertions.

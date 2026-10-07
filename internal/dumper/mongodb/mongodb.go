@@ -19,8 +19,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/duskrun/duskrun/internal/dumper/execstream"
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/dumper/execstream"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // mongodumpBinary is overridable in tests to force start failures and to point

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 const sessionSelect = `SELECT id, user_id, token_hash, user_agent, ip, created_at, last_seen_at, expires_at FROM session`

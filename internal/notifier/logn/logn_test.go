@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestLogNotify checks the event is written to the logger with its fields.

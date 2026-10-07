@@ -14,10 +14,10 @@ import (
 
 	fage "filippo.io/age"
 
-	drage "github.com/duskrun/duskrun/internal/codec/age"
-	"github.com/duskrun/duskrun/internal/codec/zstd"
-	"github.com/duskrun/duskrun/internal/plugin"
-	"github.com/duskrun/duskrun/internal/storage/localfs"
+	drage "github.com/CoOre/duskrun/internal/codec/age"
+	"github.com/CoOre/duskrun/internal/codec/zstd"
+	"github.com/CoOre/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/storage/localfs"
 )
 
 // fakeDumper streams a fixed byte slice, optionally erroring partway through to

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // sweepCapture records the config the storage plugin was built with during a

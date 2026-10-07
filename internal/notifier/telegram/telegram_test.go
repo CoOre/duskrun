@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestTelegramNotify points the base URL at a test server and checks the

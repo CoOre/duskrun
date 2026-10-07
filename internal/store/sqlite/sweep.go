@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // InsertSweep records a completed retention sweep and returns its id.

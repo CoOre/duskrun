@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // TestArtifactKeyWithoutDatabase covers the engines that have no database to

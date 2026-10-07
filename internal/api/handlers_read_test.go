@@ -15,8 +15,8 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 // seededServer opens a temp store, seeds a connection+storage+task and returns a

@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestS3ConfigParse checks defaults and validation of the pure config parser.

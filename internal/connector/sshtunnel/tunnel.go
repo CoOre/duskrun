@@ -12,8 +12,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/duskrun/duskrun/internal/plugin"
-	"github.com/duskrun/duskrun/internal/sshx"
+	"github.com/CoOre/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/sshx"
 )
 
 func init() {

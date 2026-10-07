@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // TestDeleteConnectionInUse: a connection referenced by a task is protected by

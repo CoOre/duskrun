@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // RetentionStore is the store surface the Retention Manager needs.

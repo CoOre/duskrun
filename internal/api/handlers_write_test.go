@@ -10,16 +10,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 
 	// Register the plugins the write-path validation checks against.
-	_ "github.com/duskrun/duskrun/internal/codec/zstd"
-	_ "github.com/duskrun/duskrun/internal/connector/dockerproxy"
-	_ "github.com/duskrun/duskrun/internal/connector/local"
-	_ "github.com/duskrun/duskrun/internal/dumper/postgres"
-	_ "github.com/duskrun/duskrun/internal/notifier/logn"
-	_ "github.com/duskrun/duskrun/internal/storage/localfs"
+	_ "github.com/CoOre/duskrun/internal/codec/zstd"
+	_ "github.com/CoOre/duskrun/internal/connector/dockerproxy"
+	_ "github.com/CoOre/duskrun/internal/connector/local"
+	_ "github.com/CoOre/duskrun/internal/dumper/postgres"
+	_ "github.com/CoOre/duskrun/internal/notifier/logn"
+	_ "github.com/CoOre/duskrun/internal/storage/localfs"
 )
 
 // emptyServer returns an API server over a fresh empty store.

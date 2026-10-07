@@ -10,8 +10,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/duskrun/duskrun/internal/auth"
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/auth"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // minPasswordLen is a floor, not a policy. Composition rules ("one digit, one

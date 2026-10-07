@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // cmdDoctor reports the presence and versions of the external tools duskrun

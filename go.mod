@@ -1,4 +1,4 @@
-module github.com/duskrun/duskrun
+module github.com/CoOre/duskrun
 
 go 1.26.0
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // readSSE reads all `data:` frames from an SSE response body into ProgressEvents.

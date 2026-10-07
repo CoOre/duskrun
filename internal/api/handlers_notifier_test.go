@@ -9,15 +9,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 
 	// The channel endpoints validate against the plugin registry, so the tests
 	// must link the same plugins the daemon does. Without telegram/webhook/smtp
 	// here, "unknown notifier type" would mask the behaviour under test.
-	_ "github.com/duskrun/duskrun/internal/notifier/smtp"
-	_ "github.com/duskrun/duskrun/internal/notifier/telegram"
-	_ "github.com/duskrun/duskrun/internal/notifier/webhook"
+	_ "github.com/CoOre/duskrun/internal/notifier/smtp"
+	_ "github.com/CoOre/duskrun/internal/notifier/telegram"
+	_ "github.com/CoOre/duskrun/internal/notifier/webhook"
 )
 
 // notifierServer serves the channel endpoints over a fresh store. The migration

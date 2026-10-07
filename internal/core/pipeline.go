@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // PipelineInput is a fully-resolved pipeline ready to execute: concrete plugin

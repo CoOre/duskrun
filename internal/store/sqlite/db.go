@@ -23,7 +23,7 @@ import (
 
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
 
-	"github.com/duskrun/duskrun/migrations"
+	"github.com/CoOre/duskrun/migrations"
 )
 
 // Store owns the read and write connection pools.

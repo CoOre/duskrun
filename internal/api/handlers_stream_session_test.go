@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/auth"
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/auth"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 // The SSE run stream was only ever tested with the static API token, which has

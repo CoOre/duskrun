@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestWebhookNotify posts an event and verifies the receiving server sees the

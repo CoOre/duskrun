@@ -7,11 +7,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/api"
-	"github.com/duskrun/duskrun/internal/config"
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/secret"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/api"
+	"github.com/CoOre/duskrun/internal/config"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/secret"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 // cmdServe runs the daemon: scheduler (dispatcher on a 30s ticker) + worker pool

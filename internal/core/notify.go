@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // NotifyStore is the store surface delivery needs.

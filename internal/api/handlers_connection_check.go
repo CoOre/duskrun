@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 type connectionTestStatus string

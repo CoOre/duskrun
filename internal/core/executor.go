@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // ExecutorStore is the metadata-store surface the Executor needs to assemble and

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // ManualSweepTimeout bounds a sweep started from the API. It is deliberately

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // ErrNotFound is returned when a lookup matches no row.

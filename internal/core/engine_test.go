@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // TestHealthzHandler: the liveness handler returns 200 "ok".

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 func coreConn(name, engine, connType string) core.Connection {

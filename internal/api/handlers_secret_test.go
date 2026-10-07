@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/secret"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/secret"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 // secretServer returns an API server whose Deps include a real Sealer, so the
