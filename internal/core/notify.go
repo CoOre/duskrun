@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/CoOre/duskrun/internal/obs"
 	"github.com/CoOre/duskrun/internal/plugin"
 )
 
@@ -85,7 +86,7 @@ func (n *Notifications) Send(ctx context.Context, task *Task, kind plugin.EventK
 		return
 	}
 
-	ev := plugin.Event{Kind: kind, Task: task.Name, RunID: runID, Message: msg, At: n.now()}
+	ev := plugin.Event{Kind: kind, Task: task.Name, RunID: runID, Message: obs.Scrub(msg), At: n.now()}
 	for _, ch := range channels {
 		err := ch.notifier.Notify(dctx, ev)
 		if err != nil {
@@ -110,7 +111,7 @@ func (n *Notifications) record(ctx context.Context, ev plugin.Event, channel str
 	}
 	if cause != nil {
 		entry.Status = NotificationFailed
-		entry.Error = cause.Error()
+		entry.Error = obs.Scrub(cause.Error())
 	}
 	if _, err := n.store.InsertNotification(ctx, entry); err != nil {
 		n.log.Error("notify: record delivery failed", "channel", channel, "err", err)

@@ -7,8 +7,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/CoOre/duskrun/internal/plugin"
@@ -72,15 +74,15 @@ func (n *Notifier) Notify(ctx context.Context, ev plugin.Event) error {
 	if err != nil {
 		return fmt.Errorf("telegram: marshal: %w", err)
 	}
-	url := n.cfg.BaseURL + "/bot" + n.cfg.Token + "/sendMessage"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	endpoint := n.cfg.BaseURL + "/bot" + n.cfg.Token + "/sendMessage"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return fmt.Errorf("telegram: new request: %w", err)
+		return fmt.Errorf("telegram: new request: %w", withoutURL(err))
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := n.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("telegram: post: %w", err)
+		return fmt.Errorf("telegram: post: %w", withoutURL(err))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -91,4 +93,14 @@ func (n *Notifier) Notify(ctx context.Context, ev plugin.Event) error {
 
 func formatEvent(ev plugin.Event) string {
 	return fmt.Sprintf("duskrun [%s] task=%s run=%d: %s", ev.Kind, ev.Task, ev.RunID, ev.Message)
+}
+
+// withoutURL drops the request URL from net/http errors: *url.Error prints it
+// in full, and here the URL carries the credential. The cause is kept.
+func withoutURL(err error) error {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return fmt.Errorf("%s: %w", ue.Op, ue.Err)
+	}
+	return err
 }

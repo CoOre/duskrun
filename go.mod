@@ -13,6 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.106.0
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/klauspost/compress v1.19.1
+	github.com/m-mizutani/masq v0.2.3
 	github.com/pkg/sftp v1.13.11
 	github.com/robfig/cron/v3 v3.0.1
 	golang.org/x/crypto v0.56.0

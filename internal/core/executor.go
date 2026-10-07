@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CoOre/duskrun/internal/obs"
 	"github.com/CoOre/duskrun/internal/plugin"
 )
 
@@ -75,7 +76,7 @@ func (e *Executor) Run(ctx context.Context, task *Task, runID int64) (Outcome, e
 		// Record the failure on a detached context: ctx may already be cancelled
 		// (per-run timeout or shutdown), but the terminal status MUST still be
 		// written or the run would be stuck 'running' until the next ReapStale.
-		_ = e.store.Finish(context.WithoutCancel(ctx), runID, StatusFailed, log.String(), err.Error())
+		_ = e.store.Finish(context.WithoutCancel(ctx), runID, StatusFailed, log.String(), obs.Scrub(err.Error()))
 		e.publishTerminal(runID, StatusFailed)
 		return Outcome{}, err
 	}
@@ -266,7 +267,9 @@ func (l *runLog) setPhase(p Phase) {
 }
 
 func (l *runLog) add(format string, args ...any) {
-	msg := fmt.Sprintf(format, args...)
+	// Scrubbed once here: the line goes both to the stored log and to the live
+	// stream, and dumper stderr or a wrapped error may echo a credential.
+	msg := obs.Scrub(fmt.Sprintf(format, args...))
 	l.lines = append(l.lines, time.Now().UTC().Format(time.RFC3339)+" "+msg)
 	if l.pub != nil {
 		l.pub.Log(l.runID, l.phase, msg)

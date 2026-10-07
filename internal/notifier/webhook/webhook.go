@@ -6,8 +6,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/CoOre/duskrun/internal/plugin"
@@ -52,16 +54,26 @@ func (n *Notifier) Notify(ctx context.Context, ev plugin.Event) error {
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, n.url, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("webhook: new request: %w", err)
+		return fmt.Errorf("webhook: new request: %w", withoutURL(err))
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := n.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("webhook: post: %w", err)
+		return fmt.Errorf("webhook: post: %w", withoutURL(err))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("webhook: unexpected status %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// withoutURL drops the request URL from net/http errors: *url.Error prints it
+// in full, and here the URL carries the credential. The cause is kept.
+func withoutURL(err error) error {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return fmt.Errorf("%s: %w", ue.Op, ue.Err)
+	}
+	return err
 }

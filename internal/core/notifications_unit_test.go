@@ -168,6 +168,28 @@ func TestSendRecordsDeliveryLog(t *testing.T) {
 	}
 }
 
+// TestSendScrubsSecrets: the delivery log is shown in the UI, and neither the
+// recorded cause nor the message sent to a channel may carry a credential.
+func TestSendScrubsSecrets(t *testing.T) {
+	registerSpyNotifier(t)
+	const token = "123456789:AAH-abcdefghijklmnopqrstuvwxyz012345"
+	spyErr = errors.New(`Post "https://api.telegram.org/bot` + token + `/sendMessage": timeout`)
+	t.Cleanup(func() { spyErr = nil })
+
+	spyEvents = nil
+	store := &fakeNotifyStore{channels: []NotifierChannel{chan_("tg", "spy-plugin", `{}`, "failure")}}
+	newNotifications(store, nil).Send(context.Background(),
+		&Task{Name: "orders", Notifiers: []string{"tg"}}, plugin.EventFailure, 42,
+		"dump: dial postgres://backup:s3cr3t@db:5432/app: refused")
+
+	if len(store.recorded) != 1 || strings.Contains(store.recorded[0].Error, token) {
+		t.Errorf("recorded = %+v, want one entry without the bot token", store.recorded)
+	}
+	if len(spyEvents) != 1 || strings.Contains(spyEvents[0].Message, "s3cr3t") {
+		t.Errorf("events = %+v, want the message scrubbed", spyEvents)
+	}
+}
+
 // TestSendRecordsUnbuildableChannel: a channel whose config is broken must not
 // fail silently — that was the whole problem with the previous nil-config
 // construction.

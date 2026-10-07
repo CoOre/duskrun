@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,5 +55,25 @@ func TestWebhookNotifyErrorStatus(t *testing.T) {
 	n, _ := New([]byte(`{"url":"` + srv.URL + `"}`))
 	if err := n.Notify(context.Background(), plugin.Event{Task: "t"}); err == nil {
 		t.Fatal("Notify returned nil on 500, want error")
+	}
+}
+
+// TestWebhookErrorHidesURL: Slack/Discord webhook URLs are credentials
+// themselves, so a transport error must not echo the URL.
+func TestWebhookErrorHidesURL(t *testing.T) {
+	srv := httptest.NewServer(http.NotFoundHandler())
+	hook := srv.URL + "/services/T000/B000/SECRETPATH"
+	srv.Close() // nothing listens there now: Do fails with *url.Error
+
+	n, err := New([]byte(`{"url":"` + hook + `"}`))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	err = n.Notify(context.Background(), plugin.Event{Task: "t"})
+	if err == nil {
+		t.Fatal("Notify to a closed server succeeded, want error")
+	}
+	if strings.Contains(err.Error(), "SECRETPATH") {
+		t.Errorf("error leaks the webhook URL: %s", err)
 	}
 }
