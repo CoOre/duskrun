@@ -141,6 +141,14 @@ type storageDTO struct {
 	Type      string          `json:"type"`
 	Config    json.RawMessage `json:"config,omitempty"`
 	SecretRef string          `json:"secret_ref"`
+	// Capacity is the volume size, present only for plugins that can measure
+	// it (localfs, sftp). Absent means unknown, not zero.
+	Capacity *capacityDTO `json:"capacity,omitempty"`
+}
+
+type capacityDTO struct {
+	TotalBytes int64 `json:"total_bytes"`
+	FreeBytes  int64 `json:"free_bytes"`
 }
 
 func toStorageDTO(st core.Storage) storageDTO {
@@ -239,9 +247,12 @@ func (s *server) listStorages(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	caps := s.caps.measureAll(r.Context(), storages)
 	out := make([]storageDTO, 0, len(storages))
-	for _, st := range storages {
-		out = append(out, toStorageDTO(st))
+	for i, st := range storages {
+		dto := toStorageDTO(st)
+		dto.Capacity = caps[i]
+		out = append(out, dto)
 	}
 	writeJSON(w, http.StatusOK, out)
 }

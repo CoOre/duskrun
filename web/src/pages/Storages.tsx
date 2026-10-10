@@ -1,6 +1,7 @@
 import { CSSProperties, FormEvent, useState } from 'react'
 import { useApiData } from '../api/useApiData'
 import { ApiError } from '../api/client'
+import { fmtBytes, fmtFree } from '../api/view'
 import type { Storage } from '../api/types'
 import { useAuth, useCan } from '../auth'
 import { Layout } from '../ui/Layout'
@@ -64,6 +65,11 @@ export default function Storages() {
                     <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>{s.type}{s.secret_ref ? ` · ${s.secret_ref}` : ''}</div>
                   </div>
                 </div>
+                {s.capacity && s.capacity.total_bytes > 0 && (
+                  <div style={{ fontFamily: MONO, fontSize: 11.5, color: 'var(--ink-3)', flexShrink: 0 }}>
+                    свободно <span style={{ color: 'var(--ink)' }}>{fmtFree(s.capacity.free_bytes)}</span> из {fmtBytes(s.capacity.total_bytes)}
+                  </div>
+                )}
               </div>
             ))}
           </div>

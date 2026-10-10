@@ -119,6 +119,21 @@ type Storage interface {
 	Delete(ctx context.Context, key string) error
 }
 
+// Capacity is the size of the volume a Storage writes to, in bytes. Free is
+// what an unprivileged writer can still use (statfs f_bavail), not raw free
+// blocks — the root-reserved share is not space a backup can land in.
+type Capacity struct {
+	Total int64
+	Free  int64
+}
+
+// CapacityReporter is implemented by a Storage that knows its volume size.
+// Optional: object stores (S3) have no meaningful capacity, so callers
+// type-assert and omit the figure when it is absent.
+type CapacityReporter interface {
+	Capacity(ctx context.Context) (Capacity, error)
+}
+
 // Event is what a run reports to the Notifier channels.
 type Event struct {
 	Kind    EventKind

@@ -90,6 +90,12 @@ export function fmtBytes(bytes?: number): string {
   return `${n.toFixed(digits)} ${units[u]}`
 }
 
+// fmtFree keeps a full disk readable: fmtBytes renders 0 as "—" (no data),
+// but zero free space is data — the most important kind.
+export function fmtFree(bytes: number): string {
+  return bytes > 0 ? fmtBytes(bytes) : '0 Б'
+}
+
 // "12.4 МБ/с" — throughput from bytes-per-second; "—" when unknown/zero.
 export function fmtThroughput(bps?: number): string {
   if (!bps || bps <= 0) return '—'

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApiData } from '../api/useApiData'
 import { isActiveRun, useRunsPoll } from '../api/useRunsPoll'
-import { activityBuckets, byId, fmtBytes, fmtDateTime, fmtDuration, fmtElapsed, fmtTime, nextRunIn, scheduledTasks, taskEngine } from '../api/view'
+import { activityBuckets, byId, fmtBytes, fmtDateTime, fmtFree, fmtDuration, fmtElapsed, fmtTime, nextRunIn, scheduledTasks, taskEngine } from '../api/view'
 import type { Connection, Run, Storage, Task, WatchdogAlert } from '../api/types'
 import { useAuth } from '../auth'
 import { Layout } from '../ui/Layout'
@@ -271,11 +271,13 @@ export default function Dashboard() {
                   <div key={s.name} style={{ marginBottom: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, gap: 10 }}>
                       <span style={{ fontFamily: MONO, fontSize: 11.5, color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
-                      <span style={{ fontFamily: MONO, color: 'var(--ink-3)', fontSize: 11, flexShrink: 0 }}>{s.usedLabel}</span>
+                      <span style={{ fontFamily: MONO, color: 'var(--ink-3)', fontSize: 11, flexShrink: 0 }}>{s.label}</span>
                     </div>
-                    <div style={{ height: 6, borderRadius: 3, background: 'var(--panel-2)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: 3, background: 'var(--accent)', width: `${s.pct}%` }} />
-                    </div>
+                    {s.fillPct !== null && (
+                      <div style={{ height: 6, borderRadius: 3, background: 'var(--panel-2)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 3, background: s.low ? 'var(--warn)' : 'var(--accent)', width: `${s.fillPct}%` }} />
+                      </div>
+                    )}
                   </div>
                 )) : <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>Хранилищ пока нет.</div>}
               </div>
@@ -291,7 +293,7 @@ export default function Dashboard() {
 
 interface Kpi { label: string; value: string; unit: string; color: string; sub: string; subColor: string; donut?: string; spark?: Spark[] }
 interface Spark { h: number; color: string }
-interface StorageMini { name: string; usedLabel: string; pct: number; used: number }
+interface StorageMini { name: string; label: string; fillPct: number | null; low: boolean; used: number }
 
 function SparkBars({ bars }: { bars: Spark[] }) {
   return (
@@ -349,20 +351,34 @@ export function alertReason(a: WatchdogAlert): string {
   return `превышен порог watchdog (${fmtAge(a.threshold_sec)})`
 }
 
-// Storage bars show each storage's share of the bytes Duskrun has actually
-// written. Real capacity is not something the backend reports, so the bar is
-// explicitly relative — no invented disk size.
-function buildStoragesMini(storages: Storage[], runs: Run[]): StorageMini[] {
+// Storage bars show how full the destination's volume is, which only the
+// plugins that can measure it report (localfs, sftp). For the rest the row
+// states the bytes Duskrun wrote there and draws no bar — a share of our own
+// bytes looks like disk fill (one storage is always 100%) and reads as "disk
+// is full".
+const LOW_FREE_PCT = 10
+
+export function buildStoragesMini(storages: Storage[], runs: Run[]): StorageMini[] {
   const usedById = new Map<number, number>()
   for (const r of runs) {
     if (!r.artifact) continue
     usedById.set(r.artifact.storage_id, (usedById.get(r.artifact.storage_id) ?? 0) + r.artifact.size)
   }
-  const total = [...usedById.values()].reduce((a, b) => a + b, 0)
   return storages
     .map((s) => {
       const used = usedById.get(s.id) ?? 0
-      return { name: s.name, usedLabel: fmtBytes(used), pct: total ? Math.round((used / total) * 100) : 0, used }
+      const cap = s.capacity
+      if (cap && cap.total_bytes > 0) {
+        const fillPct = Math.round(((cap.total_bytes - cap.free_bytes) / cap.total_bytes) * 100)
+        return {
+          name: s.name,
+          label: `свободно ${fmtFree(cap.free_bytes)} из ${fmtBytes(cap.total_bytes)}`,
+          fillPct,
+          low: 100 - fillPct < LOW_FREE_PCT,
+          used,
+        }
+      }
+      return { name: s.name, label: fmtBytes(used), fillPct: null, low: false, used }
     })
     .sort((a, b) => b.used - a.used)
     .slice(0, 3)

@@ -81,6 +81,8 @@ export interface Storage {
   type: string
   config?: unknown
   secret_ref: string
+  // Volume size, reported only by plugins that can measure it (localfs, sftp).
+  capacity?: { total_bytes: number; free_bytes: number }
 }
 
 export interface Secret {
