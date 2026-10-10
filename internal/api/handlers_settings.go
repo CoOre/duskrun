@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/sshx"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/sshx"
 )
 
 // Setting keys. Values are strings; this file owns their meaning.

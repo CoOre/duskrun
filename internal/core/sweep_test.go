@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 var sweepNow = time.Date(2026, 6, 15, 3, 30, 0, 0, time.UTC)

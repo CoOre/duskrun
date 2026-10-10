@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/core"
-	_ "github.com/duskrun/duskrun/internal/dumper/mongodb"
-	_ "github.com/duskrun/duskrun/internal/dumper/redis"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/core"
+	_ "github.com/CoOre/duskrun/internal/dumper/mongodb"
+	_ "github.com/CoOre/duskrun/internal/dumper/redis"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 func openTestStore(t *testing.T) *sqlite.Store {

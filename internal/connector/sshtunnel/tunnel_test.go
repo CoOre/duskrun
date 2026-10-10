@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/sshx"
+	"github.com/CoOre/duskrun/internal/sshx"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestTunnelConfigParse checks defaults and required-field validation.

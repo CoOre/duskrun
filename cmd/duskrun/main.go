@@ -9,31 +9,31 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/duskrun/duskrun/internal/config"
-	"github.com/duskrun/duskrun/internal/obs"
-	"github.com/duskrun/duskrun/internal/plugin"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/config"
+	"github.com/CoOre/duskrun/internal/obs"
+	"github.com/CoOre/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 
 	// Blank-import plugin packages so their init() registers them. The core
 	// never imports concretes directly — this is the only wiring point.
-	_ "github.com/duskrun/duskrun/internal/codec/age"             // M3: age encryption
-	_ "github.com/duskrun/duskrun/internal/codec/gzip"            // gzip compression
-	_ "github.com/duskrun/duskrun/internal/codec/tar"             // tar archive (→ .tar.gz with gzip)
-	_ "github.com/duskrun/duskrun/internal/codec/zstd"            // M1
-	_ "github.com/duskrun/duskrun/internal/connector/dockerproxy" // docker-proxy
-	_ "github.com/duskrun/duskrun/internal/connector/local"       // M1: direct, socket
-	_ "github.com/duskrun/duskrun/internal/connector/sshtunnel"   // M4: ssh-tunnel
-	_ "github.com/duskrun/duskrun/internal/dumper/mongodb"        // mongodump
-	_ "github.com/duskrun/duskrun/internal/dumper/mysql"          // M3: mysqldump
-	_ "github.com/duskrun/duskrun/internal/dumper/postgres"       // M1
-	_ "github.com/duskrun/duskrun/internal/dumper/redis"          // redis-cli --rdb
-	_ "github.com/duskrun/duskrun/internal/notifier/logn"         // M4: log
-	_ "github.com/duskrun/duskrun/internal/notifier/smtp"         // email
-	_ "github.com/duskrun/duskrun/internal/notifier/telegram"     // M4: telegram
-	_ "github.com/duskrun/duskrun/internal/notifier/webhook"      // M4: webhook
-	_ "github.com/duskrun/duskrun/internal/storage/localfs"       // M1
-	_ "github.com/duskrun/duskrun/internal/storage/s3"            // M3: s3 multipart
-	_ "github.com/duskrun/duskrun/internal/storage/sftp"          // sftp over ssh
+	_ "github.com/CoOre/duskrun/internal/codec/age"             // M3: age encryption
+	_ "github.com/CoOre/duskrun/internal/codec/gzip"            // gzip compression
+	_ "github.com/CoOre/duskrun/internal/codec/tar"             // tar archive (→ .tar.gz with gzip)
+	_ "github.com/CoOre/duskrun/internal/codec/zstd"            // M1
+	_ "github.com/CoOre/duskrun/internal/connector/dockerproxy" // docker-proxy
+	_ "github.com/CoOre/duskrun/internal/connector/local"       // M1: direct, socket
+	_ "github.com/CoOre/duskrun/internal/connector/sshtunnel"   // M4: ssh-tunnel
+	_ "github.com/CoOre/duskrun/internal/dumper/mongodb"        // mongodump
+	_ "github.com/CoOre/duskrun/internal/dumper/mysql"          // M3: mysqldump
+	_ "github.com/CoOre/duskrun/internal/dumper/postgres"       // M1
+	_ "github.com/CoOre/duskrun/internal/dumper/redis"          // redis-cli --rdb
+	_ "github.com/CoOre/duskrun/internal/notifier/logn"         // M4: log
+	_ "github.com/CoOre/duskrun/internal/notifier/smtp"         // email
+	_ "github.com/CoOre/duskrun/internal/notifier/telegram"     // M4: telegram
+	_ "github.com/CoOre/duskrun/internal/notifier/webhook"      // M4: webhook
+	_ "github.com/CoOre/duskrun/internal/storage/localfs"       // M1
+	_ "github.com/CoOre/duskrun/internal/storage/s3"            // M3: s3 multipart
+	_ "github.com/CoOre/duskrun/internal/storage/sftp"          // sftp over ssh
 )
 
 // version is stamped at build time with -ldflags "-X main.version=…" (see the

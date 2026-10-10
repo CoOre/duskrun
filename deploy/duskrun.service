@@ -1,6 +1,6 @@
 [Unit]
 Description=Duskrun self-hosted database backup daemon
-Documentation=https://github.com/duskrun/duskrun
+Documentation=https://github.com/CoOre/duskrun
 After=network-online.target
 Wants=network-online.target
 

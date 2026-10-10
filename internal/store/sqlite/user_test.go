@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 func mkUser(t *testing.T, st *Store, email string, role core.Role) int64 {

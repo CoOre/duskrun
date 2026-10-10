@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // ErrLastAdmin rejects a change that would leave the instance with no enabled

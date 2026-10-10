@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // recordPub is a core.Publisher that records everything it receives, for asserting

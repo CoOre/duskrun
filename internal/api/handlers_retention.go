@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // maxSweepLimit caps GET /retention/sweeps?limit=. The history is a summary

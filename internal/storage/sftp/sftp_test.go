@@ -19,7 +19,7 @@ import (
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // --- test SSH/SFTP server -----------------------------------------------------

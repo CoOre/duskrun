@@ -9,7 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/obs"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // ManualSweepTimeout bounds a sweep started from the API. It is deliberately
@@ -196,7 +197,7 @@ func (s *Sweeper) record(ctx context.Context, sw Sweep, cause error) (Sweep, err
 	sw.Status = SweepSuccess
 	if cause != nil {
 		sw.Status = SweepFailed
-		sw.Error = truncateErr(cause.Error(), maxSweepErrLen)
+		sw.Error = truncateErr(obs.Scrub(cause.Error()), maxSweepErrLen)
 	}
 
 	// Detached: a cancelled context must not lose the record of work already done.

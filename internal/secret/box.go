@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 const blobVersion = 1

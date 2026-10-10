@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // openTemp opens a Store on a throwaway file DB (not :memory:, since the two

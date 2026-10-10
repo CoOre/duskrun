@@ -9,7 +9,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // WatchdogStore is the store surface the Watchdog needs.

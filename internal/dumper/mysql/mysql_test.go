@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestMysqlArgs checks pure argv assembly, including flag defaults and endpoints.

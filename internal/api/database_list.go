@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/plugin"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 var (

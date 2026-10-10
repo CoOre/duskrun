@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // testNotifications wires a Notifications that delivers to spy (or nowhere when

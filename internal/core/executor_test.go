@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/plugin"
 
-	_ "github.com/duskrun/duskrun/internal/codec/zstd"      // register "zstd"
-	_ "github.com/duskrun/duskrun/internal/connector/local" // register "direct"
-	_ "github.com/duskrun/duskrun/internal/storage/localfs" // register "localfs"
+	_ "github.com/CoOre/duskrun/internal/codec/zstd"      // register "zstd"
+	_ "github.com/CoOre/duskrun/internal/connector/local" // register "direct"
+	_ "github.com/CoOre/duskrun/internal/storage/localfs" // register "localfs"
 )
 
 // --- fake dumpers used across core_test (executor + worker) ---

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // capture records the last config each fake plugin was built with, so a test can

@@ -16,8 +16,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/duskrun/duskrun/internal/dumper/execstream"
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/dumper/execstream"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 func init() {

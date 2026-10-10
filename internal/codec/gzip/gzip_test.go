@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestGzipRoundTrip compresses then decompresses through the codec and checks

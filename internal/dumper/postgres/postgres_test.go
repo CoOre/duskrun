@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestPostgresArgs checks the pure argv assembly for tcp and unix endpoints.

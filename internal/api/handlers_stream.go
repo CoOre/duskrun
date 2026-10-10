@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 // sseHeartbeat is how often a comment line is sent to keep proxies/browsers from

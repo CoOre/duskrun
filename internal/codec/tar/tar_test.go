@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestTarRoundTrip archives a payload through the codec and reads it back both

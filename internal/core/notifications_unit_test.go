@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 var noteNow = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
@@ -165,6 +165,28 @@ func TestSendRecordsDeliveryLog(t *testing.T) {
 	}
 	if got.Channel != "tg" || got.Task != "orders" || got.RunID == nil || *got.RunID != 42 {
 		t.Errorf("entry = %+v, want it attributed to the channel, task and run", got)
+	}
+}
+
+// TestSendScrubsSecrets: the delivery log is shown in the UI, and neither the
+// recorded cause nor the message sent to a channel may carry a credential.
+func TestSendScrubsSecrets(t *testing.T) {
+	registerSpyNotifier(t)
+	const token = "123456789:AAH-abcdefghijklmnopqrstuvwxyz012345"
+	spyErr = errors.New(`Post "https://api.telegram.org/bot` + token + `/sendMessage": timeout`)
+	t.Cleanup(func() { spyErr = nil })
+
+	spyEvents = nil
+	store := &fakeNotifyStore{channels: []NotifierChannel{chan_("tg", "spy-plugin", `{}`, "failure")}}
+	newNotifications(store, nil).Send(context.Background(),
+		&Task{Name: "orders", Notifiers: []string{"tg"}}, plugin.EventFailure, 42,
+		"dump: dial postgres://backup:s3cr3t@db:5432/app: refused")
+
+	if len(store.recorded) != 1 || strings.Contains(store.recorded[0].Error, token) {
+		t.Errorf("recorded = %+v, want one entry without the bot token", store.recorded)
+	}
+	if len(spyEvents) != 1 || strings.Contains(spyEvents[0].Message, "s3cr3t") {
+		t.Errorf("events = %+v, want the message scrubbed", spyEvents)
 	}
 }
 

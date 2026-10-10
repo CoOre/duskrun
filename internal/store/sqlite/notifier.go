@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 const notifierSelect = `SELECT id, name, type, config, events, enabled, created_at FROM notifier`

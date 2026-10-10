@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // LastSuccessByTask returns, per task, when its most recent successful run

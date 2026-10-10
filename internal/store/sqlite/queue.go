@@ -9,7 +9,7 @@ import (
 	sqlitedrv "modernc.org/sqlite"
 	sqlitelib "modernc.org/sqlite/lib"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // ErrNoRun is returned by ClaimNext when the queue has nothing to hand out. It

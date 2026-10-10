@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // TestTelegramNotify points the base URL at a test server and checks the
@@ -61,5 +61,26 @@ func TestTelegramValidation(t *testing.T) {
 	}
 	if got := n.(*Notifier).cfg.BaseURL; got != DefaultBaseURL {
 		t.Errorf("base url = %q, want default %q", got, DefaultBaseURL)
+	}
+}
+
+// TestTelegramErrorHidesToken: the bot token lives in the request URL, and a
+// transport error must not carry it into the log and the delivery history.
+func TestTelegramErrorHidesToken(t *testing.T) {
+	srv := httptest.NewServer(http.NotFoundHandler())
+	base := srv.URL
+	srv.Close() // nothing listens there now: Do fails with *url.Error
+
+	cfg, _ := json.Marshal(Config{BaseURL: base, Token: "123456:SECRET-TOKEN", ChatID: "1"})
+	n, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	err = n.Notify(context.Background(), plugin.Event{Task: "t"})
+	if err == nil {
+		t.Fatal("Notify to a closed server succeeded, want error")
+	}
+	if msg := err.Error(); strings.Contains(msg, "SECRET-TOKEN") || strings.Contains(msg, base) {
+		t.Errorf("error leaks the request URL: %s", msg)
 	}
 }

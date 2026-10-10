@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 // retentionDeps seeds a store with one task and builds a Sweeper over it — the

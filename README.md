@@ -69,6 +69,21 @@ codec chain — дамперы не включают собственное сж
 - резолвинг происходит и в очистке по retention, и при скачивании артефакта,
   поэтому хранилище с ключом в секретнице читается на всех путях.
 
+## Установка
+
+- **Релизный бинарник** — архив под свою платформу со страницы
+  [Releases](https://github.com/CoOre/duskrun/releases), веб-UI встроен.
+- **Docker** — `docker pull ghcr.io/coore/duskrun:latest`, клиенты БД уже в образе.
+- **go install** — для CLI и демона без веб-UI:
+
+  ```sh
+  go install github.com/CoOre/duskrun/cmd/duskrun@latest
+  ```
+
+  SPA собирается отдельной Node-стадией и в модуль не коммитится, поэтому такой
+  бинарник на `/` отдаёт страницу-заглушку; API, CLI и движок работают
+  полностью. Нужен UI — берите релизный бинарник, образ или `make release`.
+
 ## Сборка
 
 ```sh
@@ -95,7 +110,7 @@ make snapshot       # релиз без публикации: архивы по�
   повторно гоняются проверки CI и собираются:
   - архивы `duskrun_X.Y.Z_{linux,darwin}_{amd64,arm64}.tar.gz` и `checksums.txt`
     (goreleaser, `.goreleaser.yaml`) с build provenance;
-  - образ `ghcr.io/<owner>/<repo>` под `linux/amd64` и `linux/arm64` с тегами
+  - образ `ghcr.io/coore/duskrun` под `linux/amd64` и `linux/arm64` с тегами
     `X.Y.Z`, `X.Y`, `latest`, SBOM и provenance.
 - **Dependabot** (`.github/dependabot.yml`) раз в неделю группами обновляет Go-,
   npm-, Docker-зависимости и actions.
@@ -103,8 +118,8 @@ make snapshot       # релиз без публикации: архивы по�
 Проверить подпись скачанного артефакта или образа:
 
 ```sh
-gh attestation verify duskrun_X.Y.Z_linux_amd64.tar.gz --repo <owner>/<repo>
-gh attestation verify oci://ghcr.io/<owner>/<repo>:X.Y.Z --repo <owner>/<repo>
+gh attestation verify duskrun_X.Y.Z_linux_amd64.tar.gz --repo CoOre/duskrun
+gh attestation verify oci://ghcr.io/coore/duskrun:X.Y.Z --repo CoOre/duskrun
 ```
 
 ## Быстрый старт
@@ -113,7 +128,7 @@ gh attestation verify oci://ghcr.io/<owner>/<repo>:X.Y.Z --repo <owner>/<repo>
 export DUSKRUN_MASTER_KEY="<32+ байт>"     # или DUSKRUN_MASTER_KEY_FILE
 ./bin/duskrun migrate                      # применить миграции
 ./bin/duskrun plugins                      # список зарегистрированных плагинов
-./bin/duskrun serve                        # демон (движок — с M2)
+./bin/duskrun serve                        # демон: движок, API и веб-UI на :8080
 ```
 
 ## Аутентификация

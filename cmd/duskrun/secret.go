@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/duskrun/duskrun/internal/config"
-	"github.com/duskrun/duskrun/internal/secret"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/config"
+	"github.com/CoOre/duskrun/internal/secret"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 // cmdSecretSet seals a secret value and stores it.

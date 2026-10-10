@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/duskrun/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/core"
 )
 
 // smtpConfig is a channel that validates without touching the secret store: no

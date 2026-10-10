@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // ErrNoQueuedRun signals an empty queue: ClaimNext found nothing to hand out.

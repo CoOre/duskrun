@@ -13,9 +13,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
-	"github.com/duskrun/duskrun/internal/web"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/web"
 )
 
 // Deps are the API server's dependencies.

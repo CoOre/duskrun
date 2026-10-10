@@ -11,10 +11,10 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/auth"
-	"github.com/duskrun/duskrun/internal/config"
-	"github.com/duskrun/duskrun/internal/core"
-	"github.com/duskrun/duskrun/internal/store/sqlite"
+	"github.com/CoOre/duskrun/internal/auth"
+	"github.com/CoOre/duskrun/internal/config"
+	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
 // cmdUser dispatches `duskrun user <add|list|passwd>`.

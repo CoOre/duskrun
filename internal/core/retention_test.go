@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/duskrun/duskrun/internal/plugin"
+	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 var retBase = time.Date(2026, 6, 15, 3, 0, 0, 0, time.UTC)
