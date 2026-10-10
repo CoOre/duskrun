@@ -136,6 +136,7 @@ func newRouter(d Deps) (http.Handler, *server) {
 		pwSem:   make(chan struct{}, pwSemSize()),
 		limiter: newLoginLimiter(d.Now),
 	}
+	s.caps = newCapacityCache(res, d.Now)
 
 	r := chi.NewRouter()
 	r.Get("/healthz", core.HealthzHandler())
@@ -208,6 +209,8 @@ type server struct {
 	// pwSem bounds concurrent argon2 hashing (see pwSemSize).
 	pwSem   chan struct{}
 	limiter *loginLimiter
+	// caps measures and briefly remembers storage volume sizes for GET /storages.
+	caps *capacityCache
 }
 
 func (s *server) now() time.Time { return s.d.Now() }

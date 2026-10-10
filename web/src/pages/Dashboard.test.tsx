@@ -1,7 +1,8 @@
 import { screen } from '@testing-library/react'
 import { beforeEach, expect, test } from 'vitest'
 import { makeFetch, renderWithAuth } from '../test/utils'
-import Dashboard, { fmtAge } from './Dashboard'
+import type { Run } from '../api/types'
+import Dashboard, { buildStoragesMini, fmtAge } from './Dashboard'
 
 beforeEach(() => localStorage.clear())
 
@@ -100,4 +101,21 @@ test('TestFmtAge: sub-hour gaps read as minutes, not a rounded-up hour', () => {
   expect(fmtAge(3600)).toBe('1 ч')
   expect(fmtAge(31 * 3600)).toBe('31 ч')
   expect(fmtAge(48 * 3600)).toBe('2 д')
+})
+
+test('TestStoragesMiniCapacity: bar is volume fill, not a share of Duskrun bytes', () => {
+  const GB = 1024 ** 3
+  const runs: Run[] = [{ ...RUNS[0], status: 'success', artifact: { id: 1, run_id: 42, storage_id: 2, key: 'k', size: GB, checksum: '', created_at: '' } }]
+  const mini = buildStoragesMini([
+    { id: 1, name: 'disk', type: 'localfs', secret_ref: '', capacity: { total_bytes: 100 * GB, free_bytes: 5 * GB } },
+    { id: 2, name: 'bucket', type: 's3', secret_ref: '' },
+  ], runs)
+  const disk = mini.find((s) => s.name === 'disk')!
+  expect(disk.fillPct).toBe(95)
+  expect(disk.low).toBe(true)
+  expect(disk.label).toBe('свободно 5.0 ГБ из 100 ГБ')
+  // No capacity → no bar: a lone storage's 100% share must not read as a full disk.
+  const bucket = mini.find((s) => s.name === 'bucket')!
+  expect(bucket.fillPct).toBeNull()
+  expect(bucket.label).toBe('1.0 ГБ')
 })

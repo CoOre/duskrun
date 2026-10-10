@@ -176,6 +176,31 @@ func TestListStorages(t *testing.T) {
 	}
 }
 
+// A localfs storage reports its volume; one whose plugin cannot be built (the
+// seeded row has no root) is still listed, just without capacity.
+func TestListStoragesCapacity(t *testing.T) {
+	srv, db, _ := seededServer(t)
+	mustExec(t, db, `INSERT INTO storage (name, type, config, created_at) VALUES ('disk','localfs', ?, unixepoch())`,
+		`{"root":"`+t.TempDir()+`"}`)
+	resp := authGet(t, srv.URL+"/api/storages")
+	defer resp.Body.Close()
+	var storages []storageDTO
+	if err := json.NewDecoder(resp.Body).Decode(&storages); err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]storageDTO{}
+	for _, st := range storages {
+		byName[st.Name] = st
+	}
+	if c := byName["s"].Capacity; c != nil {
+		t.Fatalf("broken storage capacity = %+v, want omitted", c)
+	}
+	c := byName["disk"].Capacity
+	if c == nil || c.TotalBytes <= 0 || c.FreeBytes < 0 || c.FreeBytes > c.TotalBytes {
+		t.Fatalf("disk capacity = %+v, want 0 <= free <= total, total > 0", c)
+	}
+}
+
 func TestListRunsKeysetPage(t *testing.T) {
 	srv, db, _ := seededServer(t)
 	for i := 0; i < 5; i++ {
