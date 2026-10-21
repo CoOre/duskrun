@@ -149,6 +149,7 @@ export function RunDrawer({ runId, onClose }: { runId: number; onClose: () => vo
       <aside
         role="dialog"
         aria-label={`Запуск #${runId}`}
+        data-m="drawer"
         onClick={(e) => e.stopPropagation()}
         style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 480, maxWidth: '100%', background: 'var(--app)', borderLeft: '1px solid var(--line-2)', zIndex: 21, display: 'flex', flexDirection: 'column', boxShadow: '-24px 0 50px oklch(0 0 0 / 0.4)', animation: 'drawer-in 0.2s ease' }}
       >
@@ -218,7 +219,7 @@ export function RunDrawer({ runId, onClose }: { runId: number; onClose: () => vo
                 ЛОГ ЗАПУСКА
                 {live.active && <span className="dc-pulse-fast" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--run)' }} />}
               </div>
-              <div style={{ flex: 1, minHeight: 120, overflowY: 'auto', margin: '0 24px', padding: '12px 14px', fontFamily: MONO, fontSize: 11.5, lineHeight: 1.75, color: 'var(--ink-2)', whiteSpace: 'pre-wrap', background: 'var(--sidebar)', border: '1px solid var(--line)', borderRadius: 7 }}>
+              <div data-m="log" style={{ flex: 1, minHeight: 120, overflowY: 'auto', margin: '0 24px', padding: '12px 14px', fontFamily: MONO, fontSize: 11.5, lineHeight: 1.75, color: 'var(--ink-2)', whiteSpace: 'pre-wrap', background: 'var(--sidebar)', border: '1px solid var(--line)', borderRadius: 7 }}>
                 {logText ? logText : live.active ? 'Ожидание вывода…' : 'Лог пуст.'}
               </div>
 

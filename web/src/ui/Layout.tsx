@@ -1,5 +1,5 @@
 import { CSSProperties, ReactNode, useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuthOptional } from '../auth'
 import type { Me } from '../api/types'
 import { MONO } from './dc'
@@ -91,9 +91,15 @@ export function Layout({ title, subtitle, actions, onLogout, children }: LayoutP
   const auth = useAuthOptional()
   const identity = identityOf(auth?.me)
   const sub = subtitle ?? ''
+  // Below the tablet breakpoint the sidebar is an off-canvas drawer; any
+  // navigation closes it.
+  const [navOpen, setNavOpen] = useState(false)
+  const { pathname } = useLocation()
+  useEffect(() => setNavOpen(false), [pathname])
 
   return (
     <div
+      data-m="root"
       style={{
         fontFamily: "'Inter', sans-serif",
         display: 'flex',
@@ -104,8 +110,13 @@ export function Layout({ title, subtitle, actions, onLogout, children }: LayoutP
         overflow: 'hidden',
       }}
     >
+      {navOpen && (
+        <div data-m="navbackdrop" onClick={() => setNavOpen(false)} style={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 49 }} />
+      )}
       {/* Sidebar */}
       <div
+        data-m="sidebar"
+        data-open={navOpen ? 'true' : 'false'}
         style={{
           width: 240,
           flexShrink: 0,
@@ -142,7 +153,7 @@ export function Layout({ title, subtitle, actions, onLogout, children }: LayoutP
                 {g.title}
               </div>
               {g.items.map((it) => (
-                <NavLink key={it.to} to={it.to} end={it.end} style={{ textDecoration: 'none' }}>
+                <NavLink key={it.to} to={it.to} end={it.end} onClick={() => setNavOpen(false)} style={{ textDecoration: 'none' }}>
                   {({ isActive }) => <NavRow item={it} active={isActive} />}
                 </NavLink>
               ))}
@@ -192,6 +203,7 @@ export function Layout({ title, subtitle, actions, onLogout, children }: LayoutP
       {/* Main column */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         <div
+          data-m="topbar"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -204,11 +216,25 @@ export function Layout({ title, subtitle, actions, onLogout, children }: LayoutP
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>{title}</span>
-            <span style={{ fontFamily: MONO, fontSize: 11.5, color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
+            <button
+              type="button"
+              data-m="burger"
+              title="Меню"
+              aria-label="Меню"
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen((o) => !o)}
+              className="dc-reset dc-h-panel"
+              style={{ display: 'none', width: 36, height: 36, marginLeft: -6, borderRadius: 7, alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4, color: 'var(--ink)', flexShrink: 0 }}
+            >
+              {[0, 1, 2].map((i) => (
+                <div key={i} style={{ width: 16, height: 1.5, borderRadius: 1, background: 'currentColor' }} />
+              ))}
+            </button>
+            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+            <span data-m="hide-m" style={{ fontFamily: MONO, fontSize: 11.5, color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <div data-m="topright" style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <div data-m="hide-m" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <div style={{ position: 'absolute', left: 11, width: 11, height: 11, border: '1.5px solid var(--ink-3)', borderRadius: '50%' }} />
               <input
                 type="text"
@@ -230,6 +256,7 @@ export function Layout({ title, subtitle, actions, onLogout, children }: LayoutP
 function NavRow({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <div
+      data-m="navitem"
       className="dc-h-panel"
       style={{
         position: 'relative',

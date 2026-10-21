@@ -16,14 +16,6 @@ import (
 	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
-// eventKinds is the closed set a channel may subscribe to.
-var eventKinds = []string{
-	string(plugin.EventSuccess),
-	string(plugin.EventFailure),
-	string(plugin.EventRetentionError),
-	string(plugin.EventWatchdog),
-}
-
 // maxNotificationLimit bounds the delivery-log listing.
 const maxNotificationLimit = 500
 
@@ -255,7 +247,7 @@ func (s *server) notifierFromReq(w http.ResponseWriter, req createNotifierReq, i
 		return core.NotifierChannel{}, false
 	}
 	for _, e := range req.Events {
-		if !validEventKind(e) {
+		if !plugin.ValidEventKind(e) {
 			writeError(w, http.StatusBadRequest, "unknown event kind: "+e)
 			return core.NotifierChannel{}, false
 		}
@@ -266,8 +258,11 @@ func (s *server) notifierFromReq(w http.ResponseWriter, req createNotifierReq, i
 			events = current.Events // keep the existing subscription
 		} else {
 			// A channel created without an explicit subscription would be
-			// configured but deliver nothing, so on create "omitted" means all.
-			events = append([]string(nil), eventKinds...)
+			// configured but deliver nothing, so on create "omitted" means
+			// everything but the optional routine reports.
+			for _, k := range plugin.DefaultEventKinds() {
+				events = append(events, string(k))
+			}
 		}
 	}
 	enabled := true
@@ -370,13 +365,4 @@ func sameJSON(a, b json.RawMessage) bool {
 	av, aok := norm(a)
 	bv, bok := norm(b)
 	return aok && bok && reflect.DeepEqual(av, bv)
-}
-
-func validEventKind(kind string) bool {
-	for _, k := range eventKinds {
-		if k == kind {
-			return true
-		}
-	}
-	return false
 }

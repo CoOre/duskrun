@@ -318,7 +318,9 @@ func (l *loginLimiter) blocked(key string) (bool, time.Duration) {
 // fail records a failed attempt and returns the delay to apply before
 // answering. The delay grows with consecutive failures but stays bounded, so a
 // flood costs the attacker latency without pinning this process indefinitely.
-func (l *loginLimiter) fail(keys ...string) time.Duration {
+// locked lists the keys this very attempt locked out — each lockout is
+// reported once, by the request that caused it.
+func (l *loginLimiter) fail(keys ...string) (delay time.Duration, locked []string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now, worst := l.now(), 0
@@ -333,12 +335,15 @@ func (l *loginLimiter) fail(keys ...string) time.Duration {
 		if f.n > worst {
 			worst = f.n
 		}
+		if f.n == l.maxFail {
+			locked = append(locked, k)
+		}
 	}
 	d := time.Duration(worst) * 100 * time.Millisecond
 	if d > 2*time.Second {
 		d = 2 * time.Second
 	}
-	return d
+	return d, locked
 }
 
 // succeed clears the counters for the keys of a successful login.

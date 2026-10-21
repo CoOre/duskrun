@@ -202,7 +202,8 @@ func (s *server) loginMFA(w http.ResponseWriter, r *http.Request) {
 			c.fails++
 			return c.fails < mfaChallengeFail
 		})
-		delay := s.limiter.fail(keys...)
+		delay, locked := s.limiter.fail(keys...)
+		s.reportLockout(ctx, locked, user.Email, clientIP(r, s.d.TrustProxy), "пароль верный, второй фактор — нет")
 		select {
 		case <-time.After(delay):
 		case <-ctx.Done():
@@ -551,6 +552,9 @@ func (s *server) totpDisable(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, msg)
 		return
 	}
+	if p.User.Passkeys == 0 {
+		s.securityEvent(r.Context(), p.User.Email, "двухфакторная защита отключена: удалён последний фактор (приложение-аутентификатор)")
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
@@ -697,6 +701,9 @@ func (s *server) passkeyDelete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, msg)
 		return
 	}
+	if remaining == 0 {
+		s.securityEvent(r.Context(), p.User.Email, "двухфакторная защита отключена: удалён последний фактор (ключ доступа)")
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -765,5 +772,6 @@ func (s *server) resetUserMFA(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	s.securityEvent(ctx, u.Email, "администратор "+p.Label()+" сбросил двухфакторную защиту, все сеансы пользователя завершены")
 	writeJSON(w, http.StatusOK, toUserDTO(*u))
 }

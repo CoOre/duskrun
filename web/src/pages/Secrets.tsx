@@ -83,16 +83,16 @@ export default function Secrets() {
   const usage = usageMap(data?.conns ?? [], data?.storages ?? [])
 
   const createBtn = canAdmin ? (
-    <button style={btnPrimary} onClick={() => setOpen(true)}>
-      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span>Создать секрет
+    <button aria-label="Создать секрет" style={btnPrimary} onClick={() => setOpen(true)}>
+      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span><span data-m="hide-s">Создать секрет</span>
     </button>
   ) : null
 
   return (
     <Layout title="Секреты" subtitle="мастер-ключ · refs" onLogout={logout} actions={createBtn}>
-      <div style={{ padding: '24px 26px' }} className="dc-fade">
+      <div data-m="page" style={{ padding: '24px 26px' }} className="dc-fade">
         {/* Master-key panel */}
-        <div style={{ ...PANEL, padding: '18px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div data-m="wrap" style={{ ...PANEL, padding: '18px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
             <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--run-bg)', border: '1px solid var(--run)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <div style={{ width: 12, height: 14, border: '1.5px solid var(--run)', borderRadius: '6px 6px 2px 2px' }} />
@@ -112,15 +112,15 @@ export default function Secrets() {
         {error && <div style={{ ...MUTED, color: 'var(--err)' }} role="alert">{error}</div>}
 
         {!loading && !error && (
-          <div style={{ ...PANEL, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: SECRET_COLS, padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
+          <div data-m="tscroll" style={{ ...PANEL, overflow: 'hidden' }}>
+            <div data-m="trow" style={{ display: 'grid', gridTemplateColumns: SECRET_COLS, padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
               <div>ИМЯ</div><div>ТИП</div><div>ИСПОЛЬЗУЕТСЯ</div><div>СОЗДАН</div><div style={{ textAlign: 'right' }}>ПОСЛ. ДОСТУП</div>
             </div>
             {secrets.length === 0 ? (
               <div style={{ padding: '28px 20px', color: 'var(--ink-3)', fontSize: 13 }}>Секретов пока нет. Создайте первый — он будет зашифрован мастер-ключом.</div>
             ) : (
               secrets.map((s) => (
-                <div
+                <div data-m="trow"
                   key={s.id}
                   role="button"
                   tabIndex={0}

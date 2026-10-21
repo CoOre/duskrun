@@ -46,9 +46,16 @@ type Notifier struct {
 
 func (n *Notifier) Name() string { return "webhook" }
 
+// payload is the event as posted: its fields, plus the headline the other
+// channels show, so a receiver need not re-derive it from the kind.
+type payload struct {
+	plugin.Event
+	Title string
+}
+
 // Notify sends the event as a JSON body. A non-2xx response is an error.
 func (n *Notifier) Notify(ctx context.Context, ev plugin.Event) error {
-	body, err := json.Marshal(ev)
+	body, err := json.Marshal(payload{Event: ev, Title: plugin.Title(ev)})
 	if err != nil {
 		return fmt.Errorf("webhook: marshal event: %w", err)
 	}

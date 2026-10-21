@@ -26,6 +26,8 @@ type Notifications struct {
 	now     func() time.Time
 	log     *slog.Logger
 	resolve func(ctx context.Context, task *Task, kind plugin.EventKind) []namedNotifier
+	// systemResolve replaces channel lookup for system events in tests.
+	systemResolve func(ctx context.Context, kind plugin.EventKind) []namedNotifier
 }
 
 // namedNotifier pairs a constructed channel with the configured name it came
@@ -42,6 +44,8 @@ type NotificationsConfig struct {
 	// Resolve overrides channel construction. Tests inject fakes through it;
 	// production leaves it nil and resolves from the store.
 	Resolve func(ctx context.Context, task *Task, kind plugin.EventKind) []plugin.Notifier
+	// ResolveSystem is Resolve for system events, which have no task.
+	ResolveSystem func(ctx context.Context, kind plugin.EventKind) []plugin.Notifier
 }
 
 // NewNotifications builds the delivery service. box may be nil, in which case
@@ -64,6 +68,15 @@ func NewNotifications(store NotifyStore, box SecretOpener, cfg NotificationsConf
 		}
 	} else {
 		n.resolve = n.channelsFor
+	}
+	if cfg.ResolveSystem != nil {
+		n.systemResolve = func(ctx context.Context, kind plugin.EventKind) []namedNotifier {
+			out := []namedNotifier{}
+			for _, ch := range cfg.ResolveSystem(ctx, kind) {
+				out = append(out, namedNotifier{name: ch.Name(), notifier: ch})
+			}
+			return out
+		}
 	}
 	return n
 }
@@ -96,13 +109,67 @@ func (n *Notifications) Send(ctx context.Context, task *Task, kind plugin.EventK
 	}
 }
 
+// SendSystem delivers an event that is about the instance rather than a task —
+// a storage running out of room, a login from a new device — to every enabled
+// channel subscribed to its kind. subject names what it is about.
+func (n *Notifications) SendSystem(ctx context.Context, kind plugin.EventKind, subject, msg string) {
+	if n == nil {
+		return
+	}
+	dctx := context.WithoutCancel(ctx)
+	ev := plugin.Event{Kind: kind, Subject: subject, Message: obs.Scrub(msg), At: n.now()}
+	for _, ch := range n.systemChannels(dctx, ev) {
+		err := ch.notifier.Notify(dctx, ev)
+		if err != nil {
+			n.log.Error("notify failed", "channel", ch.name, "subject", subject, "kind", string(kind), "err", err)
+		}
+		n.record(dctx, ev, ch.name, err)
+	}
+}
+
+// systemChannels builds every channel that forwards ev's kind.
+func (n *Notifications) systemChannels(ctx context.Context, ev plugin.Event) []namedNotifier {
+	if n.systemResolve != nil {
+		return n.systemResolve(ctx, ev.Kind)
+	}
+	if n.store == nil {
+		return nil
+	}
+	configured, err := n.store.ListNotifiers(ctx)
+	if err != nil {
+		n.log.Error("notify: list channels failed", "subject", ev.Subject, "err", err)
+		return nil
+	}
+	var out []namedNotifier
+	for _, ch := range configured {
+		if !ch.Wants(string(ev.Kind)) {
+			continue
+		}
+		built, err := n.build(ctx, ch)
+		if err != nil {
+			n.log.Error("notify: channel unavailable, event not delivered",
+				"channel", ch.Name, "type", ch.Type, "subject", ev.Subject, "err", err)
+			n.record(ctx, ev, ch.Name, err)
+			continue
+		}
+		out = append(out, namedNotifier{name: ch.Name, notifier: built})
+	}
+	return out
+}
+
 // record appends the delivery attempt to the notification log.
 func (n *Notifications) record(ctx context.Context, ev plugin.Event, channel string, cause error) {
 	if n.store == nil {
 		return
 	}
+	// The log's task column names what the event is about, so a system event
+	// shows its storage or user there.
+	about := ev.Task
+	if about == "" {
+		about = ev.Subject
+	}
 	entry := Notification{
-		Kind: string(ev.Kind), Task: ev.Task, Channel: channel,
+		Kind: string(ev.Kind), Task: about, Channel: channel,
 		Status: NotificationSent, CreatedAt: ev.At,
 	}
 	if ev.RunID != 0 {

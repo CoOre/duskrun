@@ -20,7 +20,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"mime"
 	"net"
+	"net/mail"
 	"strings"
 	"sync"
 	"testing"
@@ -271,7 +273,6 @@ func TestSMTPNotifyDelivers(t *testing.T) {
 		t.Errorf("RCPT TO = %v, want [ops@corp.io]", got.rcpts)
 	}
 	for _, want := range []string{
-		"Subject: [duskrun] failure: orders-db nightly",
 		"Content-Type: text/plain; charset=UTF-8",
 		"Message-ID: <duskrun.",
 		"Событие:   failure",
@@ -282,6 +283,17 @@ func TestSMTPNotifyDelivers(t *testing.T) {
 		if !strings.Contains(got.data, want) {
 			t.Errorf("message is missing %q; got:\n%s", want, got.data)
 		}
+	}
+	msg, err := mail.ReadMessage(strings.NewReader(got.data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	subj, err := new(mime.WordDecoder).DecodeHeader(msg.Header.Get("Subject"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "[duskrun] ✗ orders-db nightly: бэкап не выполнен"; subj != want {
+		t.Errorf("subject = %q, want %q", subj, want)
 	}
 }
 

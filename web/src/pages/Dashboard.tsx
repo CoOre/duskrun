@@ -99,8 +99,8 @@ export default function Dashboard() {
   const alertsError = data?.alertsError ?? null
   const storagesMini = buildStoragesMini(storages, runs)
   const dashboardAction = (
-    <button style={{ ...btnPrimary, padding: '8px 15px' }} onClick={() => navigate('/tasks')}>
-      <span style={{ fontSize: 14, lineHeight: 1 }}>▶</span>Запустить задачу
+    <button aria-label="Запустить задачу" style={{ ...btnPrimary, padding: '8px 15px' }} onClick={() => navigate('/tasks')}>
+      <span style={{ fontSize: 14, lineHeight: 1 }}>▶</span><span data-m="hide-s">Запустить задачу</span>
     </button>
   )
 
@@ -111,9 +111,9 @@ export default function Dashboard() {
       {!loading && !error && (
         <div className="dc-fade">
           {/* KPI strip */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', background: 'var(--panel)', marginLeft: -1 }}>
+          <div data-m="kpis" style={{ display: 'flex', borderBottom: '1px solid var(--line)', background: 'var(--panel)', marginLeft: -1 }}>
             {kpis.map((k) => (
-              <div key={k.label} style={{ flex: 1, padding: '18px 22px', borderLeft: '1px solid var(--line)' }}>
+              <div key={k.label} data-m="kpi" style={{ flex: 1, padding: '18px 22px', borderLeft: '1px solid var(--line)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                   <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--ink-3)', fontFamily: MONO }}>{k.label}</span>
                   {k.donut && (
@@ -134,11 +134,11 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.85fr 1fr', gap: 0, alignItems: 'stretch' }}>
-            <div style={{ borderRight: '1px solid var(--line)', minWidth: 0 }}>
+          <div data-m="stack" style={{ display: 'grid', gridTemplateColumns: '1.85fr 1fr', gap: 0, alignItems: 'stretch' }}>
+            <div data-m="stackcol" style={{ borderRight: '1px solid var(--line)', minWidth: 0 }}>
               {/* Activity */}
               <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--line)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                <div data-m="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
                   <div>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>Активность запусков</div>
                     <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 3, fontFamily: MONO }}>
@@ -184,15 +184,15 @@ export default function Dashboard() {
                 {runs.length === 0 ? (
                   <div style={{ color: 'var(--ink-3)', fontSize: 13, padding: '20px 24px' }}>Запусков пока нет.</div>
                 ) : (
-                  <>
-                    <div style={{ display: 'grid', gridTemplateColumns: RUN_COLS, padding: '8px 24px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
+                  <div data-m="tscroll">
+                    <div data-m="trow" style={{ display: 'grid', gridTemplateColumns: RUN_COLS, padding: '8px 24px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
                       <div>ЗАДАЧА</div><div>СУБД</div><div>НАЧАЛО</div><div>ДЛИТ.</div><div style={{ textAlign: 'right' }}>РАЗМЕР</div><div style={{ textAlign: 'right' }}>СТАТУС</div>
                     </div>
                     {runs.slice(0, 8).map((r) => {
                       const task = taskById.get(r.task_id)
                       const engine = taskEngine(task, connById)
                       return (
-                        <div key={r.id} onClick={() => setSelected(r.id)} className="dc-h-panel" style={{ display: 'grid', gridTemplateColumns: RUN_COLS, padding: '11px 24px', fontSize: 12.5, borderBottom: '1px solid var(--line)', cursor: 'pointer', alignItems: 'center' }}>
+                        <div key={r.id} onClick={() => setSelected(r.id)} data-m="trow" className="dc-h-panel" style={{ display: 'grid', gridTemplateColumns: RUN_COLS, padding: '11px 24px', fontSize: 12.5, borderBottom: '1px solid var(--line)', cursor: 'pointer', alignItems: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                             {r.attempt > 1 && <span style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 600, color: 'var(--err)', border: '1px solid var(--err)', padding: '0 4px', borderRadius: 3 }}>#{r.attempt}</span>}
                             <span style={{ fontWeight: 500, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task?.name ?? `задача #${r.task_id}`}</span>
@@ -210,7 +210,7 @@ export default function Dashboard() {
                         </div>
                       )
                     })}
-                  </>
+                  </div>
                 )}
               </div>
             </div>

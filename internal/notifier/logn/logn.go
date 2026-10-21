@@ -39,17 +39,24 @@ type Notifier struct {
 
 func (n *Notifier) Name() string { return "log" }
 
-// Notify emits the event at a level matching its kind (failures at ERROR).
+// Notify emits the event at a level matching its severity (alerts at ERROR).
 func (n *Notifier) Notify(_ context.Context, ev plugin.Event) error {
 	level := slog.LevelInfo
-	if ev.Kind == plugin.EventFailure || ev.Kind == plugin.EventRetentionError {
+	switch ev.Kind.Severity() {
+	case plugin.SeverityAlert:
 		level = slog.LevelError
+	case plugin.SeverityWarn:
+		level = slog.LevelWarn
 	}
-	n.log.LogAttrs(context.Background(), level, "notification",
+	attrs := []slog.Attr{
 		slog.String("kind", string(ev.Kind)),
 		slog.String("task", ev.Task),
 		slog.Int64("run", ev.RunID),
 		slog.String("message", ev.Message),
-	)
+	}
+	if ev.Subject != "" {
+		attrs = append(attrs, slog.String("subject", ev.Subject))
+	}
+	n.log.LogAttrs(context.Background(), level, "notification", attrs...)
 	return nil
 }

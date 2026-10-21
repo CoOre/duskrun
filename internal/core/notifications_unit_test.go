@@ -315,3 +315,27 @@ func (spyNotifierPlugin) Notify(_ context.Context, ev plugin.Event) error {
 	spyEvents = append(spyEvents, ev)
 	return spyErr
 }
+
+// TestSendSystemReachesSubscribedChannels: a system event has no task to name
+// its channels, so every enabled channel subscribed to the kind hears it, and
+// the delivery log names the subject.
+func TestSendSystemReachesSubscribedChannels(t *testing.T) {
+	registerSpyNotifier(t)
+	off := chan_("muted", "spy-plugin", `{}`, "storage_low")
+	off.Enabled = false
+	store := &fakeNotifyStore{channels: []NotifierChannel{
+		chan_("ops", "spy-plugin", `{}`, "failure", "storage_low"),
+		chan_("chat", "spy-plugin", `{}`, "failure"),
+		off,
+	}}
+	n := newNotifications(store, nil)
+
+	spyEvents = nil
+	n.SendSystem(context.Background(), plugin.EventStorageLow, "nas", "свободно 2 ГБ")
+	if len(spyEvents) != 1 || spyEvents[0].Subject != "nas" || spyEvents[0].Task != "" {
+		t.Fatalf("events = %+v, want one storage_low about nas", spyEvents)
+	}
+	if len(store.recorded) != 1 || store.recorded[0].Channel != "ops" || store.recorded[0].Task != "nas" {
+		t.Fatalf("log = %+v, want one entry for ops naming nas", store.recorded)
+	}
+}

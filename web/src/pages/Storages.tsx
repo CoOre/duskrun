@@ -32,8 +32,8 @@ export default function Storages() {
   const storages = data ?? []
 
   const createBtn = (
-    canWrite ? <button style={btnPrimary} onClick={() => setOpen(true)}>
-      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span>Хранилище
+    canWrite ? <button aria-label="Хранилище" style={btnPrimary} onClick={() => setOpen(true)}>
+      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span><span data-m="hide-s">Хранилище</span>
     </button> : null
   )
 
@@ -45,10 +45,11 @@ export default function Storages() {
         storages.length === 0 ? (
           <div style={MUTED}>Хранилищ пока нет.</div>
         ) : (
-          <div style={{ padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 14 }} className="dc-fade">
+          <div data-m="page" style={{ padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 14 }} className="dc-fade">
             {storages.map((s) => (
               <div
                 key={s.id}
+                data-m="wrap"
                 role="button"
                 tabIndex={0}
                 onClick={() => setEditing(s)}
@@ -215,7 +216,7 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
         <div style={{ padding: 22 }}>
           {err && <div role="alert" style={ERR_BANNER}>{err}</div>}
           <div style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 10 }}>Тип (плагин)</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18 }}>
+          <div data-g="2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18 }}>
             {STORAGE_TYPES.map((o) => (
               <OptionCard key={o.k} active={type === o.k} onClick={o.enabled ? () => setType(o.k) : undefined} style={{ opacity: o.enabled ? 1 : 0.45, cursor: o.enabled ? 'pointer' : 'default' }}>
                 <div style={{ fontFamily: MONO, fontSize: 12.5, fontWeight: 600, color: type === o.k ? 'var(--ink)' : 'var(--ink-2)' }}>{o.label}</div>
@@ -230,7 +231,7 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
 
           {type === 's3' && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
                 <div>
                   <label style={labelStyle} htmlFor="s-bucket">Bucket</label>
                   <input id="s-bucket" className="dc-input" style={inputStyle} value={bucket} onChange={(e) => setBucket(e.target.value)} placeholder="backups" />
@@ -259,7 +260,7 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
 
           {type === 'sftp' && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
                 <div>
                   <label style={labelStyle} htmlFor="s-sftp-host">Хост</label>
                   <input id="s-sftp-host" className="dc-input" style={inputStyle} value={sftpHost} onChange={(e) => setSftpHost(e.target.value)} placeholder="offsite-nas.corp.io" />
@@ -269,7 +270,7 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
                   <input id="s-sftp-port" className="dc-input" style={inputStyle} value={sftpPort} onChange={(e) => setSftpPort(e.target.value)} />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
                 <div>
                   <label style={labelStyle} htmlFor="s-sftp-user">Пользователь</label>
                   <input id="s-sftp-user" className="dc-input" style={inputStyle} value={sftpUser} onChange={(e) => setSftpUser(e.target.value)} placeholder="backup" />
@@ -279,7 +280,7 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
                   <input id="s-sftp-path" className="dc-input" style={inputStyle} value={sftpPath} onChange={(e) => setSftpPath(e.target.value)} placeholder="/backup" />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle} htmlFor="s-sftp-hostkey">Host key</label>
                   <select id="s-sftp-hostkey" className="dc-select" style={inputStyle} value={sftpHostKeyMode} onChange={(e) => setSftpHostKeyMode(e.target.value)}>
@@ -294,7 +295,7 @@ function StorageModal({ initial, onClose, onSaved }: { initial?: Storage; onClos
             </>
           )}
         </div>
-        <div style={FOOTER_SPLIT}>
+        <div data-m="mfoot" style={FOOTER_SPLIT}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             {isEdit && <DeleteButton onDelete={remove} />}
             <button type="button" style={{ ...btnSecondary, color: 'var(--ink)' }} onClick={testAccess}>Проверить доступ</button>

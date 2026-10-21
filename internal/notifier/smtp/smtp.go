@@ -363,10 +363,10 @@ func (n *Notifier) message(ev plugin.Event) []byte {
 	return []byte(b.String())
 }
 
-// subject puts the event kind and the task up front, so a mailbox list is
-// readable without opening anything.
+// subject is the event's headline, so a mailbox list is readable without
+// opening anything.
 func subject(ev plugin.Event) string {
-	return truncate(fmt.Sprintf("[duskrun] %s: %s", ev.Kind, ev.Task), subjectLimit)
+	return truncate("[duskrun] "+plugin.Title(ev), subjectLimit)
 }
 
 // encodeSubject applies RFC 2047 when needed. QEncoding leaves pure ASCII
@@ -389,7 +389,12 @@ func body(ev plugin.Event, at time.Time) string {
 		b.WriteString("\r\n")
 	}
 	line("Событие:   ", string(ev.Kind))
-	line("Задача:    ", ev.Task)
+	if ev.Task != "" {
+		line("Задача:    ", ev.Task)
+	}
+	if ev.Subject != "" {
+		line("Объект:    ", ev.Subject)
+	}
 	if ev.RunID != 0 {
 		// A watchdog finding or a channel test has no run behind it, and
 		// "Запуск: #0" would be noise.

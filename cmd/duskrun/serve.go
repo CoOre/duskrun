@@ -10,6 +10,8 @@ import (
 	"github.com/CoOre/duskrun/internal/api"
 	"github.com/CoOre/duskrun/internal/config"
 	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/notifier/webpush"
+	"github.com/CoOre/duskrun/internal/plugin"
 	"github.com/CoOre/duskrun/internal/secret"
 	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
@@ -71,9 +73,31 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 	hub := core.NewHub(time.Now)
 	exec := core.NewExecutor(st, box, time.Now)
 	exec.SetPublisher(hub)
+	// Push needs the store and the master key, so unlike the other channels it
+	// is registered here rather than from an init(). An instance that cannot
+	// offer it (no HTTPS public URL) still registers the type, and saving such
+	// a channel is refused with the reason.
+	push, err := webpush.New(ctx, webpush.Config{
+		Store: st, Box: box, PublicURL: cfg.PublicURL, ExtraHosts: cfg.PushEndpoints, Log: log,
+	})
+	if err != nil {
+		return err
+	}
+	if _, reason := push.Available(); reason != "" {
+		log.Info("browser push notifications unavailable", "reason", reason)
+	}
+	webpush.Register(plugin.Notifiers, push)
+
 	// One delivery service for every event source: worker, sweeper and watchdog
 	// resolve the same configured channels and record the same delivery log.
 	notes := core.NewNotifications(st, box, core.NotificationsConfig{Now: time.Now}, log)
+	// Runs the reap above cut short are otherwise visible only in the history:
+	// the restart that interrupted them may have happened at 3am unattended.
+	core.ReportInterrupted(ctx, st, notes, reaped, time.Now(), log)
+	// Devices unseen for half a year count as new again on their next login.
+	if _, err := st.PruneKnownDevices(ctx, time.Now().Add(-knownDeviceTTL)); err != nil {
+		log.Warn("prune known devices", "err", err)
+	}
 
 	disp := core.NewDispatcher(st, time.Now, log)
 	pool := core.NewPool(st, exec, core.PoolConfig{Workers: cfg.WorkerLimit, Notify: notes}, log)
@@ -89,6 +113,11 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 	// The watchdog is what turns "the backup silently stopped happening" into a
 	// notification instead of something nobody notices until a restore.
 	watchdog := core.NewWatchdog(st, core.WatchdogConfig{Now: time.Now, Notify: notes}, log)
+	// The monitor covers what no single run reports: a run hanging far past
+	// its usual time, a storage that stopped answering or is filling up.
+	monitor := core.NewMonitor(st, core.MonitorConfig{
+		Now: time.Now, Notify: notes, Secrets: core.NewSecretResolver(st, box),
+	}, log)
 
 	// The HTTP surface is the API router: /healthz (public), token-guarded /api/*,
 	// and the embedded SPA with client-routing fallback — all on one listener.
@@ -105,6 +134,7 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 		RetentionCron: cfg.RetentionCron,
 		Watchdog:      watchdog,
 		Notify:        notes,
+		Push:          push,
 		TrustProxy:    cfg.TrustProxy,
 		PublicURL:     cfg.PublicURL,
 		Now:           time.Now,
@@ -123,7 +153,11 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 		Sweeper:       sweeper,
 		RetentionCron: cfg.RetentionCron,
 		Watchdog:      watchdog,
+		Monitor:       monitor,
 	}, log)
 
 	return eng.Run(ctx)
 }
+
+// knownDeviceTTL is how long a sign-in location stays known without use.
+const knownDeviceTTL = 180 * 24 * time.Hour

@@ -134,6 +134,14 @@ type CapacityReporter interface {
 	Capacity(ctx context.Context) (Capacity, error)
 }
 
+// Prober is implemented by a Storage that can check it is reachable — the
+// host answers, the credentials work — without writing or listing anything.
+// The storage monitor uses it to report a destination that went away before
+// tonight's backup finds out.
+type Prober interface {
+	Probe(ctx context.Context) error
+}
+
 // Event is what a run reports to the Notifier channels.
 type Event struct {
 	Kind    EventKind
@@ -141,17 +149,14 @@ type Event struct {
 	RunID   int64
 	Message string
 	At      time.Time
+	// Subject names what a system event is about — a storage, a user — when
+	// there is no task behind it. Task events leave it empty.
+	Subject string
 }
 
-// EventKind enumerates notifiable events (TZ §5.5).
+// EventKind enumerates notifiable events (TZ §5.5). The closed list with
+// titles and severities lives in events.go.
 type EventKind string
-
-const (
-	EventSuccess        EventKind = "success"
-	EventFailure        EventKind = "failure"
-	EventRetentionError EventKind = "retention_error"
-	EventWatchdog       EventKind = "watchdog" // v1
-)
 
 // Notifier delivers an Event to one channel (telegram/webhook/email).
 type Notifier interface {

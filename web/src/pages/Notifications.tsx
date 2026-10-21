@@ -2,12 +2,13 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import { useApiData } from '../api/useApiData'
 import { fmtDateTime } from '../api/view'
-import type { CreateNotifierReq, EventKind, Notification, NotifierChannel } from '../api/types'
+import type { CreateNotifierReq, EventKind, Notification, NotifierChannel, PushStatus, Role } from '../api/types'
 import { useAuth, useCan } from '../auth'
 import { Layout } from '../ui/Layout'
 import { DeleteButton, MONO, OptionCard, Toggle, btnPrimary, btnSecondary, inputStyle, labelStyle } from '../ui/dc'
 import { ModalShell } from '../ui/ModalShell'
 import { SecretPicker } from '../ui/SecretPicker'
+import { unavailableText } from '../push'
 
 // Channel plugins registered in the backend (internal/notifier/*).
 const CHANNEL_TYPES: { k: string; label: string; sub: string }[] = [
@@ -15,6 +16,14 @@ const CHANNEL_TYPES: { k: string; label: string; sub: string }[] = [
   { k: 'telegram', label: 'Telegram', sub: 'Bot API' },
   { k: 'webhook', label: 'Webhook', sub: 'POST JSON' },
   { k: 'smtp', label: 'Email', sub: 'SMTP' },
+  { k: 'push', label: 'Браузер', sub: 'Web Push' },
+]
+
+// Who a push channel reaches: the lowest role whose browsers get its events.
+const PUSH_AUDIENCES: { k: Role; label: string }[] = [
+  { k: 'viewer', label: 'Все пользователи' },
+  { k: 'operator', label: 'Операторы и администраторы' },
+  { k: 'admin', label: 'Только администраторы' },
 ]
 
 // TLS modes the smtp plugin accepts. The mode is explicit rather than derived
@@ -26,13 +35,46 @@ const TLS_MODES: { k: string; label: string }[] = [
   { k: 'none', label: 'Без шифрования (порт 25)' },
 ]
 
-// The event kinds a channel can subscribe to, in the order the matrix shows.
-const EVENTS: { k: EventKind; label: string; dot: string }[] = [
-  { k: 'success', label: 'Успешный бэкап', dot: 'var(--ok)' },
-  { k: 'failure', label: 'Ошибка бэкапа', dot: 'var(--err)' },
-  { k: 'retention_error', label: 'Ошибка retention', dot: 'var(--warn)' },
-  { k: 'watchdog', label: 'Watchdog: нет свежего бэкапа', dot: 'var(--warn)' },
+type EventInfo = { k: EventKind; label: string; dot: string; hint?: string }
+
+// The event kinds a channel can subscribe to, grouped and in the order the
+// matrix shows them (internal/plugin/events.go is the server's list).
+const EVENT_GROUPS: { title: string; events: EventInfo[] }[] = [
+  {
+    title: 'Бэкапы',
+    events: [
+      { k: 'success', label: 'Успешный бэкап', dot: 'var(--ok)' },
+      { k: 'failure', label: 'Ошибка бэкапа', dot: 'var(--err)' },
+      { k: 'recovered', label: 'Снова в порядке', dot: 'var(--ok)', hint: 'после сбоя, watchdog или проблем с хранилищем' },
+      { k: 'size_anomaly', label: 'Подозрительно маленький бэкап', dot: 'var(--warn)', hint: 'меньше половины обычного размера' },
+      { k: 'slow_run', label: 'Бэкап идёт дольше обычного', dot: 'var(--warn)', hint: 'в 3 раза дольше обычного и минимум на 15 минут' },
+      { k: 'interrupted', label: 'Бэкап прерван перезапуском', dot: 'var(--err)' },
+    ],
+  },
+  {
+    title: 'Контроль и ротация',
+    events: [
+      { k: 'watchdog', label: 'Watchdog: нет свежего бэкапа', dot: 'var(--warn)' },
+      { k: 'retention_error', label: 'Ошибка ротации', dot: 'var(--warn)' },
+      { k: 'retention_done', label: 'Ротация: удалены старые бэкапы', dot: 'var(--ink-3)', hint: 'необязательное, по каждой задаче' },
+    ],
+  },
+  {
+    title: 'Хранилища',
+    events: [
+      { k: 'storage_low', label: 'Заканчивается место', dot: 'var(--warn)', hint: 'меньше 10% или места меньше чем на 3 бэкапа' },
+      { k: 'storage_unreachable', label: 'Хранилище недоступно', dot: 'var(--err)', hint: 'не отвечает две проверки подряд' },
+    ],
+  },
+  {
+    title: 'Безопасность',
+    events: [
+      { k: 'security', label: 'Входы, 2FA и пользователи', dot: 'var(--err)', hint: 'новое устройство, блокировка входа, отключение 2FA, изменения учётных записей' },
+    ],
+  },
 ]
+
+const EVENTS: EventInfo[] = EVENT_GROUPS.flatMap((g) => g.events)
 
 type Data = { channels: NotifierChannel[]; log: Notification[] }
 
@@ -111,8 +153,8 @@ export default function Notifications() {
   }
 
   const createBtn = (
-    canAdmin ? <button style={btnPrimary} onClick={() => setCreating(true)}>
-      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span>Канал
+    canAdmin ? <button aria-label="Канал" style={btnPrimary} onClick={() => setCreating(true)}>
+      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span><span data-m="hide-s">Канал</span>
     </button> : null
   )
 
@@ -121,7 +163,7 @@ export default function Notifications() {
       {loading && <div style={MUTED}>Загрузка…</div>}
       {loadErr && <div style={ERRSTYLE} role="alert">{loadErr}</div>}
       {!loading && !loadErr && (
-        <div style={{ padding: '24px 26px' }} className="dc-fade">
+        <div data-m="page" style={{ padding: '24px 26px' }} className="dc-fade">
           {error && <div style={{ ...ERRSTYLE, padding: '0 0 16px 0' }} role="alert">{error}</div>}
 
           {channels.length === 0 ? (
@@ -129,7 +171,7 @@ export default function Notifications() {
               Каналов пока нет — события никуда не доставляются.
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 26 }}>
+            <div data-g="1" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 26 }}>
               {channels.map((c) => (
                 <div key={c.id} style={{ border: '1px solid var(--line)', borderRadius: 11, padding: 18, background: 'var(--panel)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10 }}>
@@ -159,24 +201,34 @@ export default function Notifications() {
           )}
 
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>События и каналы</div>
-          <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)', marginBottom: 26 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
+          <div data-m="tscroll" style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)', marginBottom: 26 }}>
+            <div data-m="trow-s" style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
               <div>СОБЫТИЕ</div>
               {channels.map((c) => <div key={c.id} style={{ textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name.toUpperCase()}</div>)}
             </div>
-            {EVENTS.map((ev) => (
-              <div key={ev.k} style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '13px 20px', borderBottom: '1px solid var(--line)', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: ev.dot }} />
-                  <span style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 500 }}>{ev.label}</span>
+            {EVENT_GROUPS.map((g) => (
+              <div key={g.title}>
+                <div data-m="trow-s" style={{ padding: '9px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', fontFamily: MONO, background: 'var(--panel-2)', borderBottom: '1px solid var(--line)' }}>
+                  {g.title.toUpperCase()}
                 </div>
-                {channels.map((c) => (
-                  <div key={c.id} style={{ display: 'flex', justifyContent: 'center' }}>
-                    <Toggle
-                      on={c.events.includes(ev.k)}
-                      label={`${ev.label} → ${c.name}`}
-                      onClick={() => patch(c, { events: toggleEvent(c.events, ev.k) })}
-                    />
+                {g.events.map((ev) => (
+                  <div data-m="trow-s" key={ev.k} style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '11px 20px', borderBottom: '1px solid var(--line)', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: ev.dot, flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 500 }}>{ev.label}</div>
+                        {ev.hint && <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>{ev.hint}</div>}
+                      </div>
+                    </div>
+                    {channels.map((c) => (
+                      <div key={c.id} style={{ display: 'flex', justifyContent: 'center' }}>
+                        <Toggle
+                          on={c.events.includes(ev.k)}
+                          label={`${ev.label} → ${c.name}`}
+                          onClick={() => patch(c, { events: toggleEvent(c.events, ev.k) })}
+                        />
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -184,11 +236,11 @@ export default function Notifications() {
           </div>
 
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>Недавние уведомления</div>
-          <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
+          <div data-m="tscroll" style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
             {log.length === 0 ? (
               <div style={{ padding: 20, fontSize: 12.5, color: 'var(--ink-3)' }}>Отправок пока не было.</div>
             ) : log.map((n) => (
-              <div key={n.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 20px', borderBottom: '1px solid var(--line)' }}>
+              <div key={n.id} data-m="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 20px', borderBottom: '1px solid var(--line)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
                   <span style={{ fontFamily: MONO, fontSize: 11.5, color: 'var(--ink-3)', minWidth: 80 }}>{fmtDateTime(n.created_at)}</span>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: n.status === 'sent' ? 'var(--ok)' : 'var(--err)', flexShrink: 0 }} />
@@ -275,6 +327,18 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
   const [username, setUsername] = useState(str(cfg.username))
   const [passwordRef, setPasswordRef] = useState(str(cfg.password_ref))
   const [tlsMode, setTlsMode] = useState(str(cfg.tls, TLS_MODES[0].k))
+  const [minRole, setMinRole] = useState(str(cfg.min_role, 'viewer'))
+  // Whether the instance can send push at all. Asked up front so the form can
+  // say why instead of letting the save fail; the server refuses it either way.
+  const [push, setPush] = useState<PushStatus | null>(null)
+  useEffect(() => {
+    let alive = true
+    api.pushStatus().then((v) => alive && setPush(v)).catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [api])
+  const pushOff = type === 'push' && push !== null && !push.available
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -294,6 +358,7 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
       if (passwordRef.trim()) c.password_ref = passwordRef.trim()
       return c
     }
+    if (type === 'push') return { min_role: minRole }
     return {}
   }
 
@@ -385,7 +450,7 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
           )}
           {type === 'smtp' && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 16 }}>
                 <div>
                   <label htmlFor="nc-host" style={labelStyle}>SMTP-хост</label>
                   <input id="nc-host" className="dc-input" style={inputStyle} value={host} onChange={(e) => setHost(e.target.value)} placeholder="smtp.corp.io" />
@@ -426,17 +491,33 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
               )}
             </>
           )}
+          {type === 'push' && (
+            <>
+              {pushOff && (
+                <div role="alert" style={{ fontSize: 12, color: 'var(--warn)', marginBottom: 14 }}>
+                  Push недоступен на этом инстансе. {unavailableText(push?.reason)}
+                </div>
+              )}
+              <label htmlFor="nc-audience" style={labelStyle}>Получатели</label>
+              <select id="nc-audience" className="dc-select" style={{ ...inputStyle, marginBottom: 10 }} value={minRole} onChange={(e) => setMinRole(e.target.value)}>
+                {PUSH_AUDIENCES.map((a) => <option key={a.k} value={a.k}>{a.label}</option>)}
+              </select>
+              <div style={{ fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                Уведомление получат браузеры, где пользователь включил push: «Настройки → Уведомления в браузере».
+              </div>
+            </>
+          )}
           {type === 'log' && (
             <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>Пишет события в журнал демона. Настраивать нечего.</div>
           )}
 
           {err && <div style={{ color: 'var(--err)', fontSize: 12.5, marginTop: 14 }} role="alert">{err}</div>}
         </div>
-        <div style={{ padding: '16px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div data-m="mfoot" style={{ padding: '16px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>{isEdit && onDelete && <DeleteButton onDelete={async () => onDelete()} />}</div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="button" style={btnSecondary} onClick={onClose}>Отмена</button>
-            <button type="submit" style={{ ...btnPrimary, opacity: busy ? 0.6 : 1 }} disabled={busy}>
+            <button type="submit" style={{ ...btnPrimary, opacity: busy || pushOff ? 0.6 : 1 }} disabled={busy || pushOff}>
               {busy ? 'Сохранение…' : isEdit ? 'Сохранить' : 'Создать'}
             </button>
           </div>

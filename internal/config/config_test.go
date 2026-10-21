@@ -80,3 +80,15 @@ func TestMissingMasterKeyStillRefused(t *testing.T) {
 		t.Fatal("an instance with no master key at all was allowed to serve")
 	}
 }
+
+func TestPushEndpointsList(t *testing.T) {
+	t.Setenv("DUSKRUN_PUSH_ENDPOINTS", " push.corp.local, ,.autopush.corp ")
+	got := envList("DUSKRUN_PUSH_ENDPOINTS")
+	if len(got) != 2 || got[0] != "push.corp.local" || got[1] != ".autopush.corp" {
+		t.Fatalf("envList = %q", got)
+	}
+	t.Setenv("DUSKRUN_PUSH_ENDPOINTS", "")
+	if got := envList("DUSKRUN_PUSH_ENDPOINTS"); got != nil {
+		t.Fatalf("empty = %q, want nil", got)
+	}
+}

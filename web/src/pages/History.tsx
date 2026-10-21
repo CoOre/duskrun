@@ -194,7 +194,7 @@ export default function History() {
       {loading && <div style={MUTED}>Загрузка…</div>}
       {error && <div style={ERRSTYLE} role="alert">{error}</div>}
       {!loading && !error && (
-        <div style={{ padding: '20px 26px' }} className="dc-fade">
+        <div data-m="page" style={{ padding: '20px 26px' }} className="dc-fade">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: MONO, marginRight: 4 }}>СТАТУС:</span>
             {STATUS_CHIPS.map((c) => (
@@ -213,16 +213,16 @@ export default function History() {
           {shown.length === 0 ? (
             <div style={MUTED}>Нет запусков под фильтр.</div>
           ) : (
-            <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
+            <div data-m="tscroll" style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
               <div ref={topSentinel} style={SENTINEL}>{loadingNewer ? 'Загрузка…' : ''}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: COLS, padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
+              <div data-m="trow" style={{ display: 'grid', gridTemplateColumns: COLS, padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
                 <div>#</div><div>ЗАДАЧА</div><div>СУБД</div><div>НАЧАЛО</div><div>ДЛИТ.</div><div style={{ textAlign: 'right' }}>РАЗМЕР</div><div style={{ textAlign: 'right' }}>СТАТУС</div>
               </div>
               {shown.map((r) => {
                 const task = taskById.get(r.task_id)
                 const engine = engineOf(r)
                 return (
-                  <div
+                  <div data-m="trow"
                     key={r.id}
                     ref={(node) => {
                       if (node) rowRefs.current.set(r.id, node)

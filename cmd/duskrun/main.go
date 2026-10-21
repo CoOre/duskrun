@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 
 	"github.com/CoOre/duskrun/internal/config"
+	"github.com/CoOre/duskrun/internal/notifier/webpush"
 	"github.com/CoOre/duskrun/internal/obs"
 	"github.com/CoOre/duskrun/internal/plugin"
 	"github.com/CoOre/duskrun/internal/store/sqlite"
@@ -139,6 +140,11 @@ func run(args []string) error {
 }
 
 func printPlugins() {
+	// push is registered by serve, which has the store it delivers from; it is
+	// added here only so the listing is complete.
+	if !plugin.Notifiers.Has(webpush.Type) {
+		webpush.Register(plugin.Notifiers, nil)
+	}
 	fmt.Println("connectors:", plugin.Connectors.Names())
 	fmt.Println("dumpers:   ", plugin.Dumpers.Names())
 	fmt.Println("codecs:    ", plugin.Codecs.Names())

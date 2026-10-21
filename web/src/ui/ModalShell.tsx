@@ -20,6 +20,7 @@ export function ModalShell({
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex }} />
       <div
         role="dialog"
+        data-m="modal"
         aria-label={title}
         className="dc-modal-in"
         onClick={(e) => e.stopPropagation()}

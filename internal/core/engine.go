@@ -33,6 +33,9 @@ type EngineConfig struct {
 	// check is a two-query scan, and alerting is once-per-episode, so a short
 	// interval costs little and shortens time-to-notice.
 	WatchdogInterval time.Duration
+	// Monitor reports slow runs and storages that are unreachable or filling
+	// up. Nil disables it.
+	Monitor *Monitor
 }
 
 // Engine is the long-running daemon: it drives the Dispatcher on a ticker, runs
@@ -48,6 +51,7 @@ type Engine struct {
 	sweepCron  string
 	watchdog   *Watchdog
 	watchTick  time.Duration
+	monitor    *Monitor
 	log        *slog.Logger
 }
 
@@ -71,7 +75,8 @@ func NewEngine(dispatcher *Dispatcher, pool *Pool, cfg EngineConfig, log *slog.L
 		handler: cfg.Handler,
 		sweeper: cfg.Sweeper, sweepCron: cfg.RetentionCron,
 		watchdog: cfg.Watchdog, watchTick: cfg.WatchdogInterval,
-		log: log,
+		monitor: cfg.Monitor,
+		log:     log,
 	}
 }
 
@@ -160,6 +165,13 @@ func (e *Engine) Run(ctx context.Context) error {
 		go func() {
 			defer wg.Done()
 			e.watchdogLoop(runCtx)
+		}()
+	}
+	if e.monitor != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			e.monitor.Run(runCtx)
 		}()
 	}
 

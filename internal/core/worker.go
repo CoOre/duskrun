@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"sync"
 	"time"
-
-	"github.com/CoOre/duskrun/internal/plugin"
 )
 
 // ErrNoQueuedRun signals an empty queue: ClaimNext found nothing to hand out.
@@ -23,9 +21,13 @@ var ErrNoQueuedRun = errors.New("core: no queued run")
 // queue operations (claim, task lookup, requeue). *sqlite.Store satisfies it.
 type WorkerStore interface {
 	ExecutorStore
+	AlertStore
+	RunHistoryStore
 	ClaimNext(ctx context.Context, worker string) (*Run, error)
 	GetTask(ctx context.Context, id int64) (*Task, error)
 	Requeue(ctx context.Context, taskID int64, nextAttempt, maxAttempts int) (int64, error)
+	ListWatchdogAlerts(ctx context.Context) (map[int64]WatchdogRecord, error)
+	ClearWatchdogAlert(ctx context.Context, taskID int64) error
 }
 
 // PoolConfig configures a worker Pool. Zero values fall back to sane defaults.
@@ -140,14 +142,14 @@ func (p *Pool) execute(ctx context.Context, worker string, run *Run) {
 	if task.Timeout > 0 {
 		runCtx, cancel = context.WithTimeout(ctx, task.Timeout)
 	}
-	_, runErr := p.exec.Run(runCtx, task, run.ID)
+	out, runErr := p.exec.Run(runCtx, task, run.ID)
 	if cancel != nil {
 		cancel()
 	}
 
 	if runErr == nil {
 		p.log.Info("worker: run success", "worker", worker, "run", run.ID, "task", task.Name)
-		p.notify.Send(ctx, task, plugin.EventSuccess, run.ID, "backup completed")
+		p.succeeded(ctx, task, run.ID, out.Size)
 		return
 	}
 	p.log.Error("worker: run failed", "worker", worker, "run", run.ID, "task", task.Name, "err", runErr)
@@ -157,7 +159,7 @@ func (p *Pool) execute(ctx context.Context, worker string, run *Run) {
 	maxAttempts := task.Retries + 1
 	nextAttempt := run.Attempt + 1
 	if nextAttempt > maxAttempts {
-		p.notify.Send(ctx, task, plugin.EventFailure, run.ID, runErr.Error())
+		p.failedTerminally(ctx, task, run.ID, runErr)
 		return
 	}
 	if d := p.backoff(run.Attempt); d > 0 {

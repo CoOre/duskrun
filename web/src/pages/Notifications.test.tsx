@@ -222,3 +222,60 @@ test('TestNotificationsEmptyStateIsHonest: no channels means nothing is delivere
   expect(await screen.findByText(/Каналов пока нет/)).toBeInTheDocument()
   expect(screen.getByText('Отправок пока не было.')).toBeInTheDocument()
 })
+
+test('TestNotificationsCreatesPushChannel: the audience becomes min_role', async () => {
+  const user = userEvent.setup()
+  const fetchImpl = makeFetch(routes({
+    'GET /api/push': { available: true, public_key: 'BKEY' },
+    'POST /api/notifiers': { id: 3 },
+  }))
+  renderWithAuth(<Notifications />, { fetchImpl })
+
+  await user.click(await screen.findByRole('button', { name: /Канал/ }))
+  await user.click(screen.getByText('Браузер'))
+  await user.type(screen.getByLabelText('Название'), 'browsers')
+  await user.selectOptions(screen.getByLabelText('Получатели'), 'operator')
+  await user.click(screen.getByRole('button', { name: 'Создать' }))
+
+  const post = fetchImpl.calls().find(([url, init]) => url === '/api/notifiers' && init?.method === 'POST')
+  expect(post).toBeDefined()
+  const body = JSON.parse(post![1].body as string)
+  expect(body.type).toBe('push')
+  expect(body.config).toEqual({ min_role: 'operator' })
+})
+
+test('TestNotificationsPushUnavailable: the form says why and will not save', async () => {
+  const user = userEvent.setup()
+  renderWithAuth(<Notifications />, {
+    fetchImpl: makeFetch(routes({ 'GET /api/push': { available: false, reason: 'insecure_origin' } })),
+  })
+
+  await user.click(await screen.findByRole('button', { name: /Канал/ }))
+  await user.click(screen.getByText('Браузер'))
+  expect(await screen.findByText(/Push недоступен на этом инстансе/)).toBeInTheDocument()
+  expect(screen.getByText(/https:\/\//)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Создать' })).toBeDisabled()
+})
+
+test('TestNotificationsGroupsEvents: the matrix offers every kind under its group, system events included', async () => {
+  const user = userEvent.setup()
+  const fetchImpl = makeFetch(routes({ 'PATCH /api/notifiers/2': { id: 2 } }))
+  renderWithAuth(<Notifications />, { fetchImpl })
+
+  for (const group of ['БЭКАПЫ', 'КОНТРОЛЬ И РОТАЦИЯ', 'ХРАНИЛИЩА', 'БЕЗОПАСНОСТЬ']) {
+    expect(await screen.findByText(group)).toBeInTheDocument()
+  }
+  expect(screen.getByText('меньше 10% или места меньше чем на 3 бэкапа')).toBeInTheDocument()
+  await user.click(screen.getByRole('switch', { name: 'Заканчивается место → ops-telegram' }))
+  await waitFor(() => {
+    const patch = fetchImpl.calls().find(([url, init]) => url === '/api/notifiers/2' && init?.method === 'PATCH')
+    expect(patch && JSON.parse(String(patch[1]?.body)).events).toEqual(['failure', 'storage_low'])
+  })
+})
+
+test('TestNotificationsLogNamesSystemEvents: a storage alert reads as such in the delivery log', async () => {
+  const log = [{ id: 10, kind: 'storage_low', task: 'nas', channel: 'log', status: 'sent', created_at: '2026-08-12T03:00:00Z' }]
+  renderWithAuth(<Notifications />, { fetchImpl: makeFetch(routes({ 'GET /api/notifications': log })) })
+  const row = (await screen.findByText('nas')).parentElement as HTMLElement
+  expect(within(row).getByText('Заканчивается место')).toBeInTheDocument()
+})

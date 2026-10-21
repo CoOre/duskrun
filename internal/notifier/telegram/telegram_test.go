@@ -84,3 +84,14 @@ func TestTelegramErrorHidesToken(t *testing.T) {
 		t.Errorf("error leaks the request URL: %s", msg)
 	}
 }
+
+func TestFormatEvent(t *testing.T) {
+	got := formatEvent(plugin.Event{Kind: plugin.EventFailure, Task: "pg", RunID: 7, Message: "pg_dump: refused"})
+	if want := "✗ pg: бэкап не выполнен\npg_dump: refused\nЗапуск #7"; got != want {
+		t.Errorf("failure = %q, want %q", got, want)
+	}
+	got = formatEvent(plugin.Event{Kind: plugin.EventStorageUnreachable, Subject: "nas", Message: "не отвечает"})
+	if want := "✗ nas: хранилище недоступно\nне отвечает"; got != want {
+		t.Errorf("system = %q, want %q", got, want)
+	}
+}

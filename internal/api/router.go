@@ -40,6 +40,9 @@ type Deps struct {
 	// way a real delivery does. Nil makes that endpoint return 503; the channel
 	// CRUD endpoints still work.
 	Notify *core.Notifications
+	// Push backs the browser subscription endpoints. Nil reports push as
+	// unavailable; *webpush.Service implements it.
+	Push PushService
 	// Secrets seals plaintext secret values for storage (POST /secrets). Nil
 	// disables the create endpoint (503) — e.g. when no master key is configured.
 	Secrets Sealer
@@ -257,6 +260,7 @@ func (s *server) routes(r chi.Router) {
 	s.registerUserRoutes(r)
 	s.registerMFARoutes(r)
 	s.registerSettingRoutes(r)
+	s.registerPushRoutes(r)
 }
 
 // writeJSON writes v as a JSON response with the given status.

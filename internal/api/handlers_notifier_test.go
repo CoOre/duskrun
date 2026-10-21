@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/plugin"
 	"github.com/CoOre/duskrun/internal/store/sqlite"
 
 	// The channel endpoints validate against the plugin registry, so the tests
@@ -50,8 +52,8 @@ func TestNotifierSeededLogChannel(t *testing.T) {
 	if len(channels) != 1 || channels[0].Name != "log" {
 		t.Fatalf("channels = %+v, want the seeded log channel", channels)
 	}
-	if len(channels[0].Events) != 4 {
-		t.Errorf("events = %v, want all four kinds", channels[0].Events)
+	if len(channels[0].Events) != len(plugin.EventKinds()) {
+		t.Errorf("events = %v, want every kind", channels[0].Events)
 	}
 	if !channels[0].Enabled {
 		t.Error("the seeded channel should be enabled")
@@ -60,6 +62,7 @@ func TestNotifierSeededLogChannel(t *testing.T) {
 
 // TestCreateNotifierDefaultsToAllEvents: a channel created without an explicit
 // subscription would be configured but deliver nothing, which reads as broken.
+// Only the optional routine reports are left off.
 func TestCreateNotifierDefaultsToAllEvents(t *testing.T) {
 	srv, _ := notifierServer(t)
 
@@ -76,8 +79,8 @@ func TestCreateNotifierDefaultsToAllEvents(t *testing.T) {
 		if c.Name != "ops" {
 			continue
 		}
-		if len(c.Events) != 4 {
-			t.Errorf("events = %v, want all four kinds by default", c.Events)
+		if len(c.Events) != len(plugin.DefaultEventKinds()) || slices.Contains(c.Events, string(plugin.EventRetentionDone)) {
+			t.Errorf("events = %v, want the default kinds", c.Events)
 		}
 		return
 	}

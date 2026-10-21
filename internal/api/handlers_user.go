@@ -106,6 +106,7 @@ func (s *server) createUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	s.securityEvent(ctx, u.Email, fmt.Sprintf("создан пользователь с ролью %s (создал %s)", u.Role, principalFrom(ctx).Label()))
 	writeJSON(w, http.StatusCreated, toUserDTO(*u))
 }
 
@@ -215,6 +216,9 @@ func (s *server) updateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if change := userChange(cur, out, hash != "" && p.UserID() != id); change != "" {
+		s.securityEvent(ctx, out.Email, change+" (изменил "+p.Label()+")")
+	}
 	writeJSON(w, http.StatusOK, toUserDTO(*out))
 }
 
@@ -227,8 +231,16 @@ func (s *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if p := principalFrom(r.Context()); p.UserID() == id {
+	p := principalFrom(r.Context())
+	if p.UserID() == id {
 		writeError(w, http.StatusConflict, "cannot delete your own account")
+		return
+	}
+	// Read first: once deleted, there is no address left to name in the alert.
+	u, err := s.d.Store.GetUser(r.Context(), id)
+	if err != nil {
+		status, msg := storeErrStatus(err)
+		writeError(w, status, msg)
 		return
 	}
 	if err := s.d.Store.DeleteUser(r.Context(), id); err != nil {
@@ -236,6 +248,7 @@ func (s *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, msg)
 		return
 	}
+	s.securityEvent(r.Context(), u.Email, "пользователь удалён (удалил "+p.Label()+")")
 	w.WriteHeader(http.StatusNoContent)
 }
 
