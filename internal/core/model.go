@@ -327,6 +327,36 @@ type WebAuthnCredential struct {
 	LastUsedAt   *time.Time
 }
 
+// VAPIDKeys is the instance's Web Push signing key pair. PublicKey is the
+// base64url uncompressed P-256 point browsers subscribe with; PrivateKey is
+// sealed under the master key identified by KeyID.
+type VAPIDKeys struct {
+	PublicKey  string
+	PrivateKey []byte
+	KeyID      string
+	CreatedAt  time.Time
+}
+
+// PushSubscription is one browser that agreed to receive push notifications
+// for a user. Endpoint is the push service URL; P256dh and Auth are the
+// browser's keys the payload is encrypted to (base64url, as the browser
+// reports them).
+type PushSubscription struct {
+	ID            int64
+	UserID        int64
+	Endpoint      string
+	P256dh        string
+	Auth          string
+	UserAgent     string
+	CreatedAt     time.Time
+	LastSuccessAt *time.Time
+	LastError     string
+	FailCount     int
+	// Role is the owner's role. Filled only by the delivery query, which is
+	// where a channel's min_role is applied.
+	Role Role
+}
+
 // Session is one logged-in client. The token itself is never stored — only
 // TokenHash — so a copy of the database does not yield live sessions.
 type Session struct {
