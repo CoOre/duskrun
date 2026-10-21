@@ -10,6 +10,8 @@ import (
 	"github.com/CoOre/duskrun/internal/api"
 	"github.com/CoOre/duskrun/internal/config"
 	"github.com/CoOre/duskrun/internal/core"
+	"github.com/CoOre/duskrun/internal/notifier/webpush"
+	"github.com/CoOre/duskrun/internal/plugin"
 	"github.com/CoOre/duskrun/internal/secret"
 	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
@@ -71,6 +73,21 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 	hub := core.NewHub(time.Now)
 	exec := core.NewExecutor(st, box, time.Now)
 	exec.SetPublisher(hub)
+	// Push needs the store and the master key, so unlike the other channels it
+	// is registered here rather than from an init(). An instance that cannot
+	// offer it (no HTTPS public URL) still registers the type, and saving such
+	// a channel is refused with the reason.
+	push, err := webpush.New(ctx, webpush.Config{
+		Store: st, Box: box, PublicURL: cfg.PublicURL, ExtraHosts: cfg.PushEndpoints, Log: log,
+	})
+	if err != nil {
+		return err
+	}
+	if _, reason := push.Available(); reason != "" {
+		log.Info("browser push notifications unavailable", "reason", reason)
+	}
+	webpush.Register(plugin.Notifiers, push)
+
 	// One delivery service for every event source: worker, sweeper and watchdog
 	// resolve the same configured channels and record the same delivery log.
 	notes := core.NewNotifications(st, box, core.NotificationsConfig{Now: time.Now}, log)

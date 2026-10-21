@@ -43,6 +43,10 @@ type Config struct {
 	// set: a passkey is bound to that host for good, and guessing it from a
 	// request's Host header behind a proxy would bind them to the wrong one.
 	PublicURL string
+	// PushEndpoints are push service hosts accepted in addition to the
+	// browsers' own (FCM, Mozilla, Apple, Windows). An entry with a leading dot
+	// matches any subdomain. Needed only for a self-hosted push service.
+	PushEndpoints []string
 }
 
 // Load builds a Config from environment variables, applying defaults. A file
@@ -56,7 +60,8 @@ type Config struct {
 //	DUSKRUN_LOG_FORMAT     default "json"
 //	DUSKRUN_RETENTION_CRON default "30 3 * * *" ("off" disables the sweep)
 //	DUSKRUN_TRUSTED_PROXY  default false (trust X-Forwarded-For for throttling)
-//	DUSKRUN_PUBLIC_URL     e.g. "https://backup.example.com" (enables passkeys)
+//	DUSKRUN_PUBLIC_URL     e.g. "https://backup.example.com" (enables passkeys and push)
+//	DUSKRUN_PUSH_ENDPOINTS extra push service hosts, comma-separated (".corp" = subdomains)
 //	DUSKRUN_MASTER_KEY     raw master key (mutually exclusive with _FILE)
 //	DUSKRUN_MASTER_KEY_FILE path to a file holding the master key
 func Load() (*Config, error) {
@@ -69,6 +74,7 @@ func Load() (*Config, error) {
 		RetentionCron: retentionCron(),
 		TrustProxy:    envBool("DUSKRUN_TRUSTED_PROXY", false),
 		PublicURL:     strings.TrimRight(strings.TrimSpace(os.Getenv("DUSKRUN_PUBLIC_URL")), "/"),
+		PushEndpoints: envList("DUSKRUN_PUSH_ENDPOINTS"),
 	}
 
 	key, keyFile := os.Getenv("DUSKRUN_MASTER_KEY"), os.Getenv("DUSKRUN_MASTER_KEY_FILE")
@@ -165,6 +171,17 @@ func envBool(k string, def bool) bool {
 		}
 	}
 	return def
+}
+
+// envList reads a comma-separated list, dropping blanks.
+func envList(k string) []string {
+	var out []string
+	for _, v := range strings.Split(os.Getenv(k), ",") {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 func envInt(k string, def int) int {
