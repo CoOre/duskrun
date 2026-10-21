@@ -19,17 +19,32 @@ var ErrLastAdmin = errors.New("sqlite: last enabled admin")
 // ErrSelfTarget rejects an admin disabling, deleting or demoting themselves.
 var ErrSelfTarget = errors.New("sqlite: cannot target own account")
 
-const userSelect = `SELECT id, email, name, role, password_hash, disabled, created_at, last_login_at FROM app_user`
+// userColumns is every column scanUser reads, qualified by the alias u so the
+// same list serves the plain user queries and the session join. The factor
+// columns are derived, not stored: see core.User.MFAEnabled.
+const userColumns = `u.id, u.email, u.name, u.role, u.password_hash, u.disabled, u.created_at, u.last_login_at,
+	u.webauthn_id,
+	EXISTS (SELECT 1 FROM user_totp t WHERE t.user_id = u.id),
+	(SELECT COUNT(*) FROM webauthn_credential w WHERE w.user_id = u.id)`
 
-func scanUser(row rowScanner) (*core.User, error) {
+const userSelect = `SELECT ` + userColumns + ` FROM app_user u`
+
+func scanUser(row rowScanner) (*core.User, error) { return scanUserAfter(row) }
+
+// scanUserAfter scans userColumns preceded by the destinations in pre, which is
+// how SessionByToken reads its session columns and the owner in one row.
+func scanUserAfter(row rowScanner, pre ...any) (*core.User, error) {
 	var (
 		u        core.User
 		role     string
 		disabled int
 		created  int64
 		login    sql.NullInt64
+		totp     int
 	)
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &role, &u.PasswordHash, &disabled, &created, &login)
+	dest := append(pre, &u.ID, &u.Email, &u.Name, &role, &u.PasswordHash, &disabled, &created, &login,
+		&u.WebAuthnID, &totp, &u.Passkeys)
+	err := row.Scan(dest...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -40,12 +55,13 @@ func scanUser(row rowScanner) (*core.User, error) {
 	u.Disabled = disabled != 0
 	u.CreatedAt = unixToTime(created)
 	u.LastLoginAt = nullTime(login)
+	u.TOTPEnabled = totp != 0
 	return &u, nil
 }
 
 // ListUsers returns every account, oldest first.
 func (s *Store) ListUsers(ctx context.Context) ([]core.User, error) {
-	rows, err := s.read.QueryContext(ctx, userSelect+` ORDER BY id`)
+	rows, err := s.read.QueryContext(ctx, userSelect+` ORDER BY u.id`)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}
@@ -63,13 +79,13 @@ func (s *Store) ListUsers(ctx context.Context) ([]core.User, error) {
 
 // GetUser loads one account by id.
 func (s *Store) GetUser(ctx context.Context, id int64) (*core.User, error) {
-	return scanUser(s.read.QueryRowContext(ctx, userSelect+` WHERE id = ?`, id))
+	return scanUser(s.read.QueryRowContext(ctx, userSelect+` WHERE u.id = ?`, id))
 }
 
 // GetUserByEmail loads one account by login. Email matching is case-insensitive:
 // addresses are stored lowercased by CreateUser, and callers normalise too.
 func (s *Store) GetUserByEmail(ctx context.Context, email string) (*core.User, error) {
-	return scanUser(s.read.QueryRowContext(ctx, userSelect+` WHERE email = ?`, normalizeEmail(email)))
+	return scanUser(s.read.QueryRowContext(ctx, userSelect+` WHERE u.email = ?`, normalizeEmail(email)))
 }
 
 // CountUsers reports how many accounts exist. Zero means the instance is still
@@ -85,8 +101,8 @@ func (s *Store) CountUsers(ctx context.Context) (int, error) {
 // CreateUser inserts an account and returns its id.
 func (s *Store) CreateUser(ctx context.Context, u core.User) (int64, error) {
 	res, err := s.write.ExecContext(ctx,
-		`INSERT INTO app_user (email, name, role, password_hash, disabled, created_at)
-		 VALUES (?, ?, ?, ?, ?, unixepoch())`,
+		`INSERT INTO app_user (email, name, role, password_hash, disabled, created_at, webauthn_id)
+		 VALUES (?, ?, ?, ?, ?, unixepoch(), randomblob(32))`,
 		normalizeEmail(u.Email), u.Name, string(u.Role), u.PasswordHash, boolToInt(u.Disabled),
 	)
 	if err != nil {
@@ -109,7 +125,7 @@ func (s *Store) UpdateUser(ctx context.Context, u core.User) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	cur, err := scanUser(tx.QueryRowContext(ctx, userSelect+` WHERE id = ?`, u.ID))
+	cur, err := scanUser(tx.QueryRowContext(ctx, userSelect+` WHERE u.id = ?`, u.ID))
 	if err != nil {
 		return err
 	}
@@ -145,7 +161,7 @@ func (s *Store) DeleteUser(ctx context.Context, id int64) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	cur, err := scanUser(tx.QueryRowContext(ctx, userSelect+` WHERE id = ?`, id))
+	cur, err := scanUser(tx.QueryRowContext(ctx, userSelect+` WHERE u.id = ?`, id))
 	if err != nil {
 		return err
 	}

@@ -38,6 +38,11 @@ type Config struct {
 	// header when nothing sets it lets a caller choose its own throttle bucket,
 	// while ignoring it behind a proxy throttles every user as one address.
 	TrustProxy bool
+	// PublicURL is the address users open the UI at (scheme://host[:port]).
+	// It names the WebAuthn relying party, so passkeys stay off until it is
+	// set: a passkey is bound to that host for good, and guessing it from a
+	// request's Host header behind a proxy would bind them to the wrong one.
+	PublicURL string
 }
 
 // Load builds a Config from environment variables, applying defaults. A file
@@ -51,6 +56,7 @@ type Config struct {
 //	DUSKRUN_LOG_FORMAT     default "json"
 //	DUSKRUN_RETENTION_CRON default "30 3 * * *" ("off" disables the sweep)
 //	DUSKRUN_TRUSTED_PROXY  default false (trust X-Forwarded-For for throttling)
+//	DUSKRUN_PUBLIC_URL     e.g. "https://backup.example.com" (enables passkeys)
 //	DUSKRUN_MASTER_KEY     raw master key (mutually exclusive with _FILE)
 //	DUSKRUN_MASTER_KEY_FILE path to a file holding the master key
 func Load() (*Config, error) {
@@ -62,6 +68,7 @@ func Load() (*Config, error) {
 		APIToken:      os.Getenv("DUSKRUN_API_TOKEN"),
 		RetentionCron: retentionCron(),
 		TrustProxy:    envBool("DUSKRUN_TRUSTED_PROXY", false),
+		PublicURL:     strings.TrimRight(strings.TrimSpace(os.Getenv("DUSKRUN_PUBLIC_URL")), "/"),
 	}
 
 	key, keyFile := os.Getenv("DUSKRUN_MASTER_KEY"), os.Getenv("DUSKRUN_MASTER_KEY_FILE")

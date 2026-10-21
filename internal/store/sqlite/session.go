@@ -49,35 +49,25 @@ func (s *Store) CreateSession(ctx context.Context, sess core.Session) (int64, er
 func (s *Store) SessionByToken(ctx context.Context, tokenHash string) (*core.Session, *core.User, error) {
 	row := s.read.QueryRowContext(ctx,
 		`SELECT s.id, s.user_id, s.token_hash, s.user_agent, s.ip, s.created_at, s.last_seen_at, s.expires_at,
-		        u.id, u.email, u.name, u.role, u.password_hash, u.disabled, u.created_at, u.last_login_at
+		        `+userColumns+`
 		   FROM session s JOIN app_user u ON u.id = s.user_id
 		  WHERE s.token_hash = ?`, tokenHash)
 
 	var (
 		sess                       core.Session
-		u                          core.User
 		created, lastSeen, expires int64
-		role                       string
-		disabled                   int
-		userCreated                int64
-		lastLogin                  sql.NullInt64
 	)
-	err := row.Scan(
+	u, err := scanUserAfter(row,
 		&sess.ID, &sess.UserID, &sess.TokenHash, &sess.UserAgent, &sess.IP, &created, &lastSeen, &expires,
-		&u.ID, &u.Email, &u.Name, &role, &u.PasswordHash, &disabled, &userCreated, &lastLogin,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, ErrNotFound) {
 		return nil, nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("session by token: %w", err)
 	}
 	sess.CreatedAt, sess.LastSeenAt, sess.ExpiresAt = unixToTime(created), unixToTime(lastSeen), unixToTime(expires)
-	u.Role = core.Role(role)
-	u.Disabled = disabled != 0
-	u.CreatedAt = unixToTime(userCreated)
-	u.LastLoginAt = nullTime(lastLogin)
-	return &sess, &u, nil
+	return &sess, u, nil
 }
 
 // GetSession loads one session by id.
