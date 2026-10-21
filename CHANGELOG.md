@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.0](https://github.com/CoOre/duskrun/compare/v0.2.0...v0.3.0) (2026-10-21)
+
+
+### Новое
+
+* **auth:** двухфакторная аутентификация — TOTP, passkeys и коды восстановления ([bfa60df](https://github.com/CoOre/duskrun/commit/bfa60dfed60ec02f16100d5616a90eb905cd8675))
+* **auth:** двухфакторная аутентификация — TOTP, passkeys и коды восстановления ([dbd2591](https://github.com/CoOre/duskrun/commit/dbd259174c9c9b73d587cbd44202f40bd9588c91))
+* **web:** вход со вторым фактором и управление 2FA в настройках ([3841371](https://github.com/CoOre/duskrun/commit/38413719cbefa6f3fc42edf2a2a372ad8bdf3da3))
+
 ## [0.2.0](https://github.com/CoOre/duskrun/compare/v0.1.0...v0.2.0) (2026-10-10)
 
 
