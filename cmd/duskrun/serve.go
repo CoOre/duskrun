@@ -122,6 +122,7 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 		RetentionCron: cfg.RetentionCron,
 		Watchdog:      watchdog,
 		Notify:        notes,
+		Push:          push,
 		TrustProxy:    cfg.TrustProxy,
 		PublicURL:     cfg.PublicURL,
 		Now:           time.Now,
