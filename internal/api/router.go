@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-webauthn/webauthn/webauthn"
 
 	"github.com/CoOre/duskrun/internal/core"
 	"github.com/CoOre/duskrun/internal/store/sqlite"
@@ -58,6 +59,10 @@ type Deps struct {
 	// throttling bucket, and honouring RemoteAddr behind a proxy would throttle
 	// every user as one. See clientIP.
 	TrustProxy bool
+	// PublicURL is DUSKRUN_PUBLIC_URL: the origin the UI is served from. It
+	// names the WebAuthn relying party; empty leaves passkeys unavailable while
+	// TOTP keeps working.
+	PublicURL string
 	// Now is the clock, injectable for tests. Nil defaults to time.Now.
 	Now func() time.Time
 	// Instance describes the read-only "Instance" block of the settings page:
@@ -129,12 +134,22 @@ func newRouter(d Deps) (http.Handler, *server) {
 	if d.Now == nil {
 		d.Now = time.Now
 	}
+	wa, err := newWebAuthn(d.PublicURL, defaultInstanceName)
+	if err != nil {
+		// A typo in an optional variable must not keep the daemon down; the
+		// settings page reports passkeys as unavailable and TOTP still works.
+		d.Log.Warn("passkeys disabled", "err", err)
+	}
 	s := &server{
-		d:       d,
-		res:     res,
-		roles:   map[string]core.Role{},
-		pwSem:   make(chan struct{}, pwSemSize()),
-		limiter: newLoginLimiter(d.Now),
+		d:        d,
+		res:      res,
+		opener:   opener,
+		roles:    map[string]core.Role{},
+		enrollOK: map[string]bool{},
+		pwSem:    make(chan struct{}, pwSemSize()),
+		limiter:  newLoginLimiter(d.Now),
+		webauthn: wa,
+		mfa:      newMFAState(d.Now),
 	}
 	s.caps = newCapacityCache(res, d.Now)
 
@@ -153,6 +168,10 @@ func newRouter(d Deps) (http.Handler, *server) {
 		// obtains the credential every other route demands, so it must sit
 		// outside the authentication middleware rather than under it.
 		r.Post("/login", s.login)
+		// The second step of a login with 2FA. Public for the same reason:
+		// the caller holds only the short-lived mfa_token /login handed out.
+		r.Post("/login/mfa", s.loginMFA)
+		r.Post("/login/mfa/webauthn/options", s.loginMFAWebAuthnOptions)
 
 		r.Group(func(r chi.Router) {
 			r.Use(s.authenticate)
@@ -206,6 +225,15 @@ type server struct {
 	// roles records the minimum role of every registered route, keyed
 	// "METHOD /pattern". Written only during NewRouter, read by the guard test.
 	roles map[string]core.Role
+	// enrollOK marks the routes still reachable by a user whom the MFA policy
+	// requires to enrol a second factor first (see guard).
+	enrollOK map[string]bool
+	// opener decrypts sealed values (TOTP secrets); nil without a master key.
+	opener core.SecretOpener
+	// webauthn is the passkey relying party, nil when DUSKRUN_PUBLIC_URL is
+	// unset or invalid.
+	webauthn *webauthn.WebAuthn
+	mfa      *mfaState
 	// pwSem bounds concurrent argon2 hashing (see pwSemSize).
 	pwSem   chan struct{}
 	limiter *loginLimiter
@@ -227,6 +255,7 @@ func (s *server) routes(r chi.Router) {
 	s.registerNotifierRoutes(r)
 	s.registerAuthRoutes(r)
 	s.registerUserRoutes(r)
+	s.registerMFARoutes(r)
 	s.registerSettingRoutes(r)
 }
 

@@ -4,6 +4,7 @@ import Connections from './pages/Connections'
 import Dashboard from './pages/Dashboard'
 import History from './pages/History'
 import Login from './pages/Login'
+import MFAEnroll from './pages/MFAEnroll'
 import Notifications from './pages/Notifications'
 import Retention from './pages/Retention'
 import Secrets from './pages/Secrets'
@@ -16,13 +17,24 @@ import TaskWizard from './pages/TaskWizard'
 // AppRoutes holds the route table and the auth guard. It is exported separately
 // so tests can drive it inside a MemoryRouter.
 export function AppRoutes() {
-  const { isAuthed } = useAuth()
+  const { isAuthed, me, loadingMe } = useAuth()
+  // While the policy demands a second factor this account lacks, every
+  // protected path shows the enrolment screen instead — the server would 403
+  // the page's own requests anyway. Until /me has answered nothing is mounted,
+  // or those pages would fire their requests first and flash the 403s.
+  const gate = !isAuthed ? (
+    <Navigate to="/login" replace />
+  ) : !me && loadingMe ? null : me?.mfa_enroll_required ? (
+    <MFAEnroll />
+  ) : (
+    <Outlet />
+  )
   return (
     <Routes>
       <Route path="/login" element={isAuthed ? <Navigate to="/" replace /> : <Login />} />
 
       {/* Protected group: unauthenticated users bounce to /login. */}
-      <Route element={isAuthed ? <Outlet /> : <Navigate to="/login" replace />}>
+      <Route element={gate}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/tasks/new" element={<TaskWizard />} />

@@ -47,6 +47,7 @@ type instanceDTO struct {
 type settingsDTO struct {
 	InstanceName string      `json:"instance_name"`
 	HostKeyMode  string      `json:"ssh_host_key_mode_default"`
+	MFARequired  string      `json:"mfa_required"`
 	Instance     instanceDTO `json:"instance"`
 }
 
@@ -54,6 +55,7 @@ func (s *server) getSettings(w http.ResponseWriter, r *http.Request) {
 	out := settingsDTO{
 		InstanceName: defaultInstanceName,
 		HostKeyMode:  defaultHostKeyModeName,
+		MFARequired:  mfaPolicyOff,
 		Instance:     s.instanceInfo(),
 	}
 	if s.d.Store != nil {
@@ -64,6 +66,10 @@ func (s *server) getSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if out.HostKeyMode, err = s.d.Store.GetSetting(ctx, settingHostKeyDefault, defaultHostKeyModeName); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if out.MFARequired, err = s.mfaPolicy(ctx); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -89,6 +95,7 @@ func (s *server) instanceInfo() instanceDTO {
 type updateSettingsReq struct {
 	InstanceName *string `json:"instance_name"`
 	HostKeyMode  *string `json:"ssh_host_key_mode_default"`
+	MFARequired  *string `json:"mfa_required"`
 }
 
 // updateSettings writes the editable keys. Omitted fields keep their value.
@@ -118,6 +125,21 @@ func (s *server) updateSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		kv[settingHostKeyDefault] = mode
+	}
+	if req.MFARequired != nil {
+		policy := strings.TrimSpace(*req.MFARequired)
+		if policy != mfaPolicyOff && policy != mfaPolicyAdmins && policy != mfaPolicyAll {
+			writeError(w, http.StatusBadRequest, "mfa_required must be off, admins or all")
+			return
+		}
+		// An admin without a factor switching the requirement on would be
+		// sent to the enrolment screen by their very next request. Refusing
+		// says what to do first instead of appearing to lock them out.
+		if p := principalFrom(r.Context()); p.User != nil && !p.User.MFAEnabled() && policyCovers(policy, p.User.Role) {
+			writeError(w, http.StatusConflict, "set up two-factor authentication for your own account before requiring it")
+			return
+		}
+		kv[settingMFARequired] = policy
 	}
 	if err := s.d.Store.PutSettings(r.Context(), kv); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

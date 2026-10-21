@@ -17,7 +17,7 @@ import (
 	"github.com/CoOre/duskrun/internal/store/sqlite"
 )
 
-// cmdUser dispatches `duskrun user <add|list|passwd>`.
+// cmdUser dispatches `duskrun user <add|list|passwd|reset-2fa>`.
 //
 // This is the bootstrap path: until an account exists there is nobody to create
 // one over HTTP, so the first administrator is made here. Unlike serve, none of
@@ -35,8 +35,10 @@ func cmdUser(cfg *config.Config, args []string) error {
 		return cmdUserList(cfg, args[1:])
 	case "passwd":
 		return cmdUserPasswd(cfg, args[1:])
+	case "reset-2fa":
+		return cmdUserResetMFA(cfg, args[1:])
 	default:
-		return errors.New("usage: duskrun user <add|list|passwd> [flags]")
+		return errors.New("usage: duskrun user <add|list|passwd|reset-2fa> [flags]")
 	}
 }
 
@@ -105,7 +107,7 @@ func cmdUserList(cfg *config.Config, args []string) error {
 		return nil
 	}
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tEMAIL\tNAME\tROLE\tSTATE\tLAST LOGIN")
+	fmt.Fprintln(tw, "ID\tEMAIL\tNAME\tROLE\tSTATE\t2FA\tLAST LOGIN")
 	for _, u := range users {
 		state := "enabled"
 		if u.Disabled {
@@ -115,7 +117,7 @@ func cmdUserList(cfg *config.Config, args []string) error {
 		if u.LastLoginAt != nil {
 			last = u.LastLoginAt.Format(time.RFC3339)
 		}
-		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\n", u.ID, u.Email, u.Name, u.Role, state, last)
+		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%s\n", u.ID, u.Email, u.Name, u.Role, state, mfaLabel(u), last)
 	}
 	return tw.Flush()
 }
@@ -161,6 +163,63 @@ func cmdUserPasswd(cfg *config.Config, args []string) error {
 	}
 	fmt.Printf("password for %q updated; all sessions of this user were ended\n", addr)
 	return nil
+}
+
+// cmdUserResetMFA removes every second factor and recovery code of an account.
+//
+// This is the last-resort recovery: the only admin lost both their
+// authenticator and their recovery codes, so there is nobody left to reset it
+// from the UI. Shell access to the host is the proof of authority, as it is for
+// `user passwd`. Like the UI reset it ends every session of the account.
+func cmdUserResetMFA(cfg *config.Config, args []string) error {
+	fs := flag.NewFlagSet("user reset-2fa", flag.ContinueOnError)
+	email := fs.String("email", "", "login email (required)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	addr := strings.ToLower(strings.TrimSpace(*email))
+	if addr == "" {
+		return errors.New("user reset-2fa: --email is required")
+	}
+
+	ctx := context.Background()
+	st, err := sqlite.Open(ctx, cfg.DBPath)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+
+	u, err := st.GetUserByEmail(ctx, addr)
+	if err != nil {
+		if errors.Is(err, sqlite.ErrNotFound) {
+			return fmt.Errorf("user reset-2fa: no user %q", addr)
+		}
+		return err
+	}
+	if err := st.ResetUserMFA(ctx, u.ID); err != nil {
+		return err
+	}
+	if !u.MFAEnabled() {
+		fmt.Printf("%q had no second factor; all sessions of this user were ended\n", addr)
+		return nil
+	}
+	fmt.Printf("two-factor authentication for %q was reset; all sessions of this user were ended\n", addr)
+	return nil
+}
+
+// mfaLabel summarises an account's second factors for `user list`.
+func mfaLabel(u core.User) string {
+	var parts []string
+	if u.TOTPEnabled {
+		parts = append(parts, "totp")
+	}
+	if u.Passkeys > 0 {
+		parts = append(parts, fmt.Sprintf("%d passkey(s)", u.Passkeys))
+	}
+	if len(parts) == 0 {
+		return "-"
+	}
+	return strings.Join(parts, ", ")
 }
 
 // minCLIPasswordLen mirrors the API's floor so the two paths cannot disagree

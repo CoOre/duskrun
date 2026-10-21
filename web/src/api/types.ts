@@ -276,6 +276,10 @@ export interface User {
   disabled: boolean
   created_at: string
   last_login_at?: string
+  /** True when an authenticator app is enrolled. */
+  mfa_totp?: boolean
+  /** Number of registered passkeys. */
+  mfa_passkeys?: number
 }
 
 // Me is the identity behind the current credential. `static: true` means the
@@ -289,12 +293,79 @@ export interface Me {
   user_id?: number
   session_id?: number
   expires_at?: string
+  /** The account has at least one second factor. */
+  mfa_enabled?: boolean
+  /**
+   * The instance policy demands 2FA and this account has none yet. Until a
+   * factor is enrolled the server answers 403 to everything but /me, /me/mfa/*
+   * and /logout, so the app shows the enrolment screen instead of its pages.
+   */
+  mfa_enroll_required?: boolean
 }
 
+export type MFAMethod = 'totp' | 'webauthn' | 'recovery'
+
+/** A session issued by POST /login or POST /login/mfa. */
 export interface LoginResp {
   token: string
   expires_at: string
   user: User
+  /** Present after a recovery-code login: how many unused codes remain. */
+  recovery_codes_left?: number
+}
+
+/** The password was right, but the account wants a second factor first. */
+export interface LoginMFAChallenge {
+  mfa_required: true
+  mfa_token: string
+  mfa_methods: MFAMethod[]
+}
+
+export type LoginResult = LoginResp | LoginMFAChallenge
+
+export function isMFAChallenge(r: LoginResult): r is LoginMFAChallenge {
+  return (r as LoginMFAChallenge).mfa_required === true
+}
+
+export interface LoginMFAReq {
+  mfa_token: string
+  method: MFAMethod
+  code?: string
+  credential?: unknown
+}
+
+export type MFAPolicy = 'off' | 'admins' | 'all'
+
+export interface Passkey {
+  id: number
+  name: string
+  created_at: string
+  last_used_at?: string
+}
+
+/** GET /me/mfa: the caller's own second factors. */
+export interface MFAStatus {
+  totp: boolean
+  passkeys: Passkey[]
+  recovery_codes_left: number
+  /** False when the server has no DUSKRUN_PUBLIC_URL to bind passkeys to. */
+  webauthn_available: boolean
+  policy: MFAPolicy
+  /** The policy applies to this account, so its last factor cannot be removed. */
+  required: boolean
+}
+
+export interface TOTPSetup {
+  secret: string
+  otpauth_url: string
+  /** data:image/png;base64,… QR code of otpauth_url. */
+  qr: string
+}
+
+/** WebAuthn options as sent by the server: binary fields are base64url. */
+export interface PublicKeyOptionsJSON {
+  publicKey: Record<string, unknown>
+  mediation?: string
 }
 
 export interface Session {
@@ -325,6 +396,7 @@ export interface InstanceInfo {
 export interface Settings {
   instance_name: string
   ssh_host_key_mode_default: 'tofu' | 'strict'
+  mfa_required?: MFAPolicy
   instance: InstanceInfo
 }
 

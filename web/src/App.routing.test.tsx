@@ -35,3 +35,15 @@ test('unknown authed path falls back to the dashboard', async () => {
   renderAt('/nope', 'a-token', EMPTY())
   expect(await screen.findByText('Активность запусков')).toBeInTheDocument()
 })
+
+test('TestEnrollGate: a required-but-missing 2FA replaces every page with enrolment', async () => {
+  const fetch = makeFetch({
+    'GET /api/me': { static: false, role: 'operator', email: 'op@corp.io', user_id: 3, session_id: 9, mfa_enabled: false, mfa_enroll_required: true },
+    'GET /api/me/mfa': { totp: false, passkeys: [], recovery_codes_left: 0, webauthn_available: false, policy: 'all', required: true },
+  })
+  renderAt('/tasks', 'a-token', fetch)
+  expect(await screen.findByText('Администратор требует 2FA')).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: 'Настроить' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Выйти' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Задачи' }) ?? screen.queryByText(/^\d+ задач$/)).toBeNull()
+})

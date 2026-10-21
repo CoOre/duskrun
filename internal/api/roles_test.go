@@ -25,7 +25,11 @@ func TestEveryRouteHasARole(t *testing.T) {
 	}
 
 	// Public by design; everything else under /api must carry a role.
-	exempt := map[string]bool{"POST /api/login": true}
+	exempt := map[string]bool{
+		"POST /api/login":                      true,
+		"POST /api/login/mfa":                  true,
+		"POST /api/login/mfa/webauthn/options": true,
+	}
 
 	var missing []string
 	err := chi.Walk(mux, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {

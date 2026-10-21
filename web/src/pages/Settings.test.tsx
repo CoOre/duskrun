@@ -23,8 +23,10 @@ const SETTINGS = {
 
 const USERS = [
   { id: 1, email: 'admin@corp.io', name: 'Админ', role: 'admin', disabled: false, created_at: '2026-08-01T00:00:00Z', last_login_at: '2026-08-12T09:00:00Z' },
-  { id: 2, email: 'viewer@corp.io', name: '', role: 'viewer', disabled: true, created_at: '2026-08-02T00:00:00Z' },
+  { id: 2, email: 'viewer@corp.io', name: '', role: 'viewer', disabled: true, created_at: '2026-08-02T00:00:00Z', mfa_totp: true, mfa_passkeys: 1 },
 ]
+
+const MFA_OFF = { totp: false, passkeys: [], recovery_codes_left: 0, webauthn_available: true, policy: 'off', required: false }
 
 const SESSIONS = [
   { id: 11, user_id: 1, email: 'admin@corp.io', user_agent: 'Firefox', ip: '10.0.0.2', created_at: '2026-08-12T08:00:00Z', last_seen_at: '2026-08-12T09:59:00Z', expires_at: '2026-09-11T08:00:00Z', current: true },
@@ -40,6 +42,7 @@ function routes(over: Record<string, unknown> = {}) {
     'GET /api/settings': SETTINGS,
     'GET /api/users': USERS,
     'GET /api/sessions': SESSIONS,
+    'GET /api/me/mfa': MFA_OFF,
     ...over,
   }
 }
@@ -210,4 +213,165 @@ test('TestChangeOwnPassword: mismatched repeat is caught before the request', as
       new_password: 'new password here',
     })
   })
+})
+
+// --- 2FA -----------------------------------------------------------------
+
+test('TestUserTableShowsMFA: factors are summarised and only others can be reset', async () => {
+  renderWithAuth(<Settings />, { fetchImpl: makeFetch(routes()) })
+  expect(await screen.findByText('TOTP + 1 passkey')).toBeInTheDocument()
+  // One reset button: viewer has 2FA; the admin row is the caller and has none.
+  expect(screen.getAllByRole('button', { name: 'Сбросить 2FA' })).toHaveLength(1)
+})
+
+test('TestAdminResetsMFA: confirmation dialog, then POST /users/{id}/mfa/reset', async () => {
+  const user = userEvent.setup()
+  const fetch = makeFetch(routes({ 'POST /api/users/2/mfa/reset': { ...USERS[1], mfa_totp: false, mfa_passkeys: 0 } }))
+  renderWithAuth(<Settings />, { fetchImpl: fetch })
+
+  await user.click(await screen.findByRole('button', { name: 'Сбросить 2FA' }))
+  const dialog = screen.getByRole('dialog')
+  expect(dialog).toHaveTextContent('viewer@corp.io')
+  // Nothing is sent until the admin confirms in the dialog.
+  expect(fetch.calls().some(([url]) => String(url).endsWith('/mfa/reset'))).toBe(false)
+  await user.click(within(dialog).getByRole('button', { name: 'Сбросить 2FA' }))
+
+  await waitFor(() => {
+    expect(fetch.calls().some(([url, init]) => String(url).endsWith('/api/users/2/mfa/reset') && init?.method === 'POST')).toBe(true)
+  })
+  expect(await screen.findByRole('status')).toHaveTextContent(/2FA пользователя viewer@corp.io сброшена/)
+})
+
+test('TestMFAPolicySaves: the select PATCHes mfa_required alone', async () => {
+  const user = userEvent.setup()
+  const fetch = makeFetch(routes({ 'PATCH /api/settings': { ...SETTINGS, mfa_required: 'admins' } }))
+  renderWithAuth(<Settings />, { fetchImpl: fetch })
+
+  await user.selectOptions(await screen.findByLabelText('Требовать 2FA'), 'admins')
+
+  await waitFor(() => {
+    const patch = fetch.calls().find(([, init]) => init?.method === 'PATCH')
+    expect(JSON.parse(patch![1].body)).toEqual({ mfa_required: 'admins' })
+  })
+})
+
+test('TestMFAPolicyConflictSurfaces: an admin without 2FA sees the 409', async () => {
+  const user = userEvent.setup()
+  const fetch = makeFetch(routes({
+    'PATCH /api/settings': { status: 409, body: { error: 'enable 2FA on your own account first' } },
+  }))
+  renderWithAuth(<Settings />, { fetchImpl: fetch })
+
+  await user.selectOptions(await screen.findByLabelText('Требовать 2FA'), 'all')
+  expect(await screen.findByRole('alert')).toHaveTextContent(/enable 2FA on your own account first/)
+})
+
+test('TestEnableTOTP: password → QR → code → recovery codes that must be acknowledged', async () => {
+  const user = userEvent.setup()
+  const codes = ['aaaa-bbbb-cccc', 'dddd-eeee-ffff']
+  const fetch = makeFetch(routes({
+    'POST /api/me/mfa/totp/setup': { secret: 'JBSWY3DPEHPK3PXP', otpauth_url: 'otpauth://totp/x', qr: 'data:image/png;base64,AAAA' },
+    'POST /api/me/mfa/totp/confirm': { recovery_codes: codes },
+  }))
+  renderWithAuth(<Settings />, { fetchImpl: fetch })
+
+  await user.click(await screen.findByRole('button', { name: 'Настроить' }))
+  let dialog = screen.getByRole('dialog')
+  await user.type(within(dialog).getByLabelText('Текущий пароль'), 'correct horse battery')
+  await user.click(within(dialog).getByRole('button', { name: 'Далее' }))
+
+  expect(await within(dialog).findByAltText(/QR-код/)).toHaveAttribute('src', 'data:image/png;base64,AAAA')
+  expect(within(dialog).getByTestId('totp-secret')).toHaveTextContent('JBSW Y3DP EHPK 3PXP')
+  const setup = fetch.calls().find(([url]) => String(url).endsWith('/totp/setup'))!
+  expect(JSON.parse(setup[1].body)).toEqual({ password: 'correct horse battery' })
+
+  // A malformed code is caught locally.
+  await user.type(within(dialog).getByLabelText('Код из приложения'), '12')
+  await user.click(within(dialog).getByRole('button', { name: 'Подтвердить' }))
+  expect(within(dialog).getByRole('alert')).toHaveTextContent(/6 цифр/)
+  expect(fetch.calls().some(([url]) => String(url).endsWith('/totp/confirm'))).toBe(false)
+
+  await user.clear(within(dialog).getByLabelText('Код из приложения'))
+  await user.type(within(dialog).getByLabelText('Код из приложения'), '123 456')
+  await user.click(within(dialog).getByRole('button', { name: 'Подтвердить' }))
+
+  dialog = await screen.findByRole('dialog', { name: 'Коды восстановления' })
+  expect(within(dialog).getByTestId('recovery-codes')).toHaveTextContent('aaaa-bbbb-cccc')
+  const confirm = fetch.calls().find(([url]) => String(url).endsWith('/totp/confirm'))!
+  expect(JSON.parse(confirm[1].body)).toEqual({ code: '123456' })
+
+  const doneBtn = within(dialog).getByRole('button', { name: 'Готово' })
+  expect(doneBtn).toBeDisabled()
+  await user.click(within(dialog).getByLabelText('Я сохранил коды'))
+  await user.click(doneBtn)
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+test('TestRegenerateCodesWrongPassword: the 403 reads as a wrong password', async () => {
+  const user = userEvent.setup()
+  const fetch = makeFetch(routes({
+    'GET /api/me/mfa': { ...MFA_OFF, totp: true, recovery_codes_left: 2 },
+    'POST /api/me/mfa/recovery-codes': { status: 403, body: { error: 'current password is incorrect' } },
+  }))
+  renderWithAuth(<Settings />, { fetchImpl: fetch })
+
+  expect(await screen.findByText(/Осталось неиспользованных: 2/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Сгенерировать новые' }))
+  const dialog = screen.getByRole('dialog')
+  await user.type(within(dialog).getByLabelText('Текущий пароль'), 'nope nope nope')
+  await user.click(within(dialog).getByRole('button', { name: 'Сгенерировать' }))
+
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Неверный пароль')
+})
+
+test('TestLastFactorLockedByPolicy: the only factor cannot be removed when required', async () => {
+  // As a viewer, so the admin user table's own "Отключить" is not on the page.
+  const fetch = makeFetch(routes({
+    'GET /api/me': VIEWER_ME,
+    'GET /api/me/mfa': { ...MFA_OFF, totp: true, recovery_codes_left: 10, policy: 'all', required: true },
+  }))
+  renderWithAuth(<Settings />, { fetchImpl: fetch })
+
+  expect(await screen.findByRole('button', { name: 'Отключить' })).toBeDisabled()
+})
+
+test('TestPasskeysNeedPublicURL: without DUSKRUN_PUBLIC_URL adding is disabled and explained', async () => {
+  const fetch = makeFetch(routes({ 'GET /api/me/mfa': { ...MFA_OFF, webauthn_available: false } }))
+  renderWithAuth(<Settings />, { fetchImpl: fetch })
+
+  expect(await screen.findByText(/DUSKRUN_PUBLIC_URL/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Добавить passkey' })).toBeDisabled()
+})
+
+test('TestDeletePasskey: password goes in the DELETE body', async () => {
+  const user = userEvent.setup()
+  const fetch = makeFetch(routes({
+    'GET /api/me/mfa': { ...MFA_OFF, totp: true, recovery_codes_left: 10, passkeys: [{ id: 5, name: 'YubiKey', created_at: '2026-08-01T00:00:00Z' }] },
+    'DELETE /api/me/mfa/passkeys/5': { status: 204, body: null },
+  }))
+  renderWithAuth(<Settings />, { fetchImpl: fetch })
+
+  await user.click(await screen.findByRole('button', { name: 'Удалить passkey YubiKey' }))
+  const dialog = screen.getByRole('dialog')
+  await user.type(within(dialog).getByLabelText('Текущий пароль'), 'correct horse battery')
+  await user.click(within(dialog).getByRole('button', { name: 'Удалить' }))
+
+  await waitFor(() => {
+    const del = fetch.calls().find(([url, init]) => String(url).endsWith('/api/me/mfa/passkeys/5') && init?.method === 'DELETE')
+    expect(JSON.parse(del![1].body)).toEqual({ password: 'correct horse battery' })
+  })
+})
+
+test('TestStaticTokenHidesMFA: the API token has no second factor to manage', async () => {
+  const fetch = makeFetch({
+    'GET /api/me': { static: true, role: 'admin' },
+    'GET /api/settings': SETTINGS,
+    'GET /api/users': USERS,
+    'GET /api/sessions': [],
+  })
+  renderWithAuth(<Settings />, { fetchImpl: fetch })
+
+  await screen.findByDisplayValue('prod-eu')
+  expect(screen.queryByText('Двухфакторная аутентификация')).not.toBeInTheDocument()
+  expect(fetch.calls().some(([url]) => String(url).endsWith('/api/me/mfa'))).toBe(false)
 })

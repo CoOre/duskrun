@@ -290,6 +290,41 @@ type User struct {
 	Disabled     bool
 	CreatedAt    time.Time
 	LastLoginAt  *time.Time
+	// WebAuthnID is the random WebAuthn user handle (never the row id, which
+	// SQLite may reuse after a delete).
+	WebAuthnID []byte
+	// TOTPEnabled and Passkeys are derived from the factor tables on every
+	// read, so there is no separate "2FA on" flag that could disagree with the
+	// factors actually enrolled.
+	TOTPEnabled bool
+	Passkeys    int
+}
+
+// MFAEnabled reports whether the account has at least one second factor.
+func (u *User) MFAEnabled() bool { return u.TOTPEnabled || u.Passkeys > 0 }
+
+// TOTP is a user's enrolled authenticator-app secret. Secret is sealed under
+// the master key identified by KeyID; LastStep is the newest time step already
+// accepted, which is what makes each code single-use.
+type TOTP struct {
+	UserID    int64
+	Secret    []byte
+	KeyID     string
+	LastStep  int64
+	CreatedAt time.Time
+}
+
+// WebAuthnCredential is one registered passkey or security key. Data is the
+// library's own encoding of the credential record (public key, counter,
+// flags); the other fields exist for listing and lookup.
+type WebAuthnCredential struct {
+	ID           int64
+	UserID       int64
+	CredentialID []byte
+	Name         string
+	Data         []byte
+	CreatedAt    time.Time
+	LastUsedAt   *time.Time
 }
 
 // Session is one logged-in client. The token itself is never stored — only

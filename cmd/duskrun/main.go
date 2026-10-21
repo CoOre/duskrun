@@ -157,6 +157,7 @@ commands:
   user add          create a login (--email, --role, --name; password via stdin)
   user list         list logins
   user passwd       set a login's password (--email; password via stdin)
+  user reset-2fa    remove a login's second factors and recovery codes (--email)
   serve             run the daemon (scheduler + workers + API)   [M2+]
   migrate           apply metadata migrations and exit
   plugins           list registered plugins

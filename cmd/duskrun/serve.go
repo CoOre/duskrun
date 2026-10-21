@@ -106,6 +106,7 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 		Watchdog:      watchdog,
 		Notify:        notes,
 		TrustProxy:    cfg.TrustProxy,
+		PublicURL:     cfg.PublicURL,
 		Now:           time.Now,
 		Instance: api.InstanceInfo{
 			Version:       resolveVersion(),

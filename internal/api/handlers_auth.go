@@ -19,8 +19,8 @@ import (
 // the session list. POST /login is registered separately in NewRouter — it is
 // the only route that must be reachable without a credential.
 func (s *server) registerAuthRoutes(r chi.Router) {
-	s.post(r, "/logout", core.RoleViewer, s.logout)
-	s.get(r, "/me", core.RoleViewer, s.me)
+	s.enrollRoute(r, http.MethodPost, "/logout", core.RoleViewer, s.logout)
+	s.enrollRoute(r, http.MethodGet, "/me", core.RoleViewer, s.me)
 	s.post(r, "/me/password", core.RoleViewer, s.changeOwnPassword)
 	s.get(r, "/sessions", core.RoleViewer, s.listSessions)
 	s.del(r, "/sessions/{id}", core.RoleViewer, s.deleteSession)
@@ -35,12 +35,15 @@ type userDTO struct {
 	Disabled    bool       `json:"disabled"`
 	CreatedAt   time.Time  `json:"created_at"`
 	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
+	MFATOTP     bool       `json:"mfa_totp"`
+	MFAPasskeys int        `json:"mfa_passkeys"`
 }
 
 func toUserDTO(u core.User) userDTO {
 	return userDTO{
 		ID: u.ID, Email: u.Email, Name: u.Name, Role: string(u.Role),
 		Disabled: u.Disabled, CreatedAt: u.CreatedAt, LastLoginAt: u.LastLoginAt,
+		MFATOTP: u.TOTPEnabled, MFAPasskeys: u.Passkeys,
 	}
 }
 
@@ -54,6 +57,11 @@ type meDTO struct {
 	UserID    int64     `json:"user_id,omitempty"`
 	SessionID int64     `json:"session_id,omitempty"`
 	ExpiresAt time.Time `json:"expires_at,omitzero"`
+	// MFAEnabled says the account has a second factor; MFAEnrollRequired that
+	// the instance policy demands one it lacks, which the SPA answers with the
+	// enrolment screen in place of every page.
+	MFAEnabled        bool `json:"mfa_enabled,omitempty"`
+	MFAEnrollRequired bool `json:"mfa_enroll_required,omitempty"`
 }
 
 func (s *server) me(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +69,7 @@ func (s *server) me(w http.ResponseWriter, r *http.Request) {
 	out := meDTO{Static: p.Static, Role: string(p.Role)}
 	if p.User != nil {
 		out.Email, out.Name, out.UserID = p.User.Email, p.User.Name, p.User.ID
+		out.MFAEnabled, out.MFAEnrollRequired = p.User.MFAEnabled(), p.MFAEnrollRequired
 	}
 	if p.Session != nil {
 		out.SessionID, out.ExpiresAt = p.Session.ID, p.Session.ExpiresAt
@@ -77,6 +86,18 @@ type loginResp struct {
 	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expires_at"`
 	User      userDTO   `json:"user"`
+	// RecoveryCodesLeft is reported after a login with a recovery code, so the
+	// UI can urge the user to make new ones before they run out.
+	RecoveryCodesLeft *int `json:"recovery_codes_left,omitempty"`
+}
+
+// mfaChallengeResp is /login's answer when the password was right but the
+// account has a second factor: no session yet, only a short-lived token that
+// lets the client complete the login at /login/mfa.
+type mfaChallengeResp struct {
+	MFARequired bool     `json:"mfa_required"`
+	MFAToken    string   `json:"mfa_token"`
+	MFAMethods  []string `json:"mfa_methods"`
 }
 
 // login exchanges email + password for a session token.
@@ -162,6 +183,17 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	s.limiter.succeed(keys...)
 
+	if user.MFAEnabled() {
+		s.startMFAChallenge(w, user)
+		return
+	}
+	s.issueSession(w, r, user, nil)
+}
+
+// issueSession creates a session for user and writes the login response. It is
+// the common tail of a password-only login and of a completed second factor.
+func (s *server) issueSession(w http.ResponseWriter, r *http.Request, user *core.User, codesLeft *int) {
+	ctx := r.Context()
 	token, err := auth.NewSessionToken()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -187,7 +219,9 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// The token is returned exactly once — only its hash is persisted.
-	writeJSON(w, http.StatusOK, loginResp{Token: token, ExpiresAt: sess.ExpiresAt, User: toUserDTO(*user)})
+	writeJSON(w, http.StatusOK, loginResp{
+		Token: token, ExpiresAt: sess.ExpiresAt, User: toUserDTO(*user), RecoveryCodesLeft: codesLeft,
+	})
 }
 
 // logout ends the calling session. The static token has no session, so it

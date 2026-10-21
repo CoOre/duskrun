@@ -37,6 +37,10 @@ type principal struct {
 	Role    core.Role
 	User    *core.User    // nil when Static
 	Session *core.Session // nil when Static
+	// MFAEnrollRequired is set when the instance policy demands a second factor
+	// this user has not enrolled yet. Such a session may only reach the routes
+	// needed to enrol one (see guard); everything else answers 403.
+	MFAEnrollRequired bool
 }
 
 // IsAdmin is the common check for "may act on other people's things".
@@ -168,7 +172,18 @@ func (s *server) resolveSession(r *http.Request, tok string) (*principal, error)
 			s.d.Log.Warn("touch session", "session", sess.ID, "err", err)
 		}
 	}
-	return &principal{Role: user.Role, User: user, Session: sess}, nil
+	p := &principal{Role: user.Role, User: user, Session: sess}
+	// Evaluated per request rather than stamped on the session at login, so a
+	// policy switched on applies to sessions that already exist — otherwise
+	// "require 2FA" would only bite whenever each user next happened to log in.
+	if !user.MFAEnabled() {
+		policy, err := s.mfaPolicy(ctx)
+		if err != nil {
+			return nil, err
+		}
+		p.MFAEnrollRequired = policyCovers(policy, user.Role)
+	}
+	return p, nil
 }
 
 // slideExpiry extends a session by sessionTTL from now, clamped to
@@ -199,12 +214,20 @@ func (s *server) sessionAlive(ctx context.Context, p *principal) bool {
 	return !user.Disabled && s.now().Before(sess.ExpiresAt)
 }
 
-// guard wraps a handler with the minimum role it requires.
-func guard(want core.Role, h http.HandlerFunc) http.HandlerFunc {
+// guard wraps a handler with the minimum role it requires. enrollOK lets the
+// route through for a user who still has to enrol a second factor; every other
+// route refuses them.
+func guard(want core.Role, enrollOK bool, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := principalFrom(r.Context())
 		if p == nil {
 			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		// 403, not 401: the session is valid, and a 401 would make the SPA
+		// throw the token away instead of showing the enrolment screen.
+		if p.MFAEnrollRequired && !enrollOK {
+			writeError(w, http.StatusForbidden, "two-factor authentication must be set up first")
 			return
 		}
 		if !p.Role.AtLeast(want) {
@@ -224,7 +247,15 @@ func guard(want core.Role, h http.HandlerFunc) http.HandlerFunc {
 // also lets TestEveryRouteHasARole catch a new endpoint added without a role.
 func (s *server) route(r chi.Router, method, pattern string, role core.Role, h http.HandlerFunc) {
 	s.roles[method+" "+pattern] = role
-	r.Method(method, pattern, guard(role, h))
+	r.Method(method, pattern, guard(role, s.enrollOK[method+" "+pattern], h))
+}
+
+// enrollRoute registers a route that stays reachable while the MFA policy is
+// holding the caller at the enrolment screen: identity, logout, and the
+// endpoints that enrol a factor. Nothing that reads or changes backups.
+func (s *server) enrollRoute(r chi.Router, method, pattern string, role core.Role, h http.HandlerFunc) {
+	s.enrollOK[method+" "+pattern] = true
+	s.route(r, method, pattern, role, h)
 }
 
 func (s *server) get(r chi.Router, pattern string, role core.Role, h http.HandlerFunc) {

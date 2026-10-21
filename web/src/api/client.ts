@@ -8,8 +8,13 @@ import type {
   CreateTaskReq,
   CreateUserReq,
   DatabaseList,
+  LoginMFAReq,
   LoginResp,
+  LoginResult,
   Me,
+  MFAStatus,
+  Passkey,
+  PublicKeyOptionsJSON,
   Notification,
   NotifierChannel,
   NotifierTestResult,
@@ -22,6 +27,7 @@ import type {
   Settings,
   Sweep,
   Task,
+  TOTPSetup,
   UpdateUserReq,
   User,
   WatchdogAlert,
@@ -72,7 +78,10 @@ export class ApiClient {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
 
-    if (resp.status === 401) {
+    // The /login routes are public: their 401 means "wrong password/code", not
+    // "your session died", so it must not wipe the stored credential.
+    const isPublic = path === '/login' || path.startsWith('/login/')
+    if (resp.status === 401 && !isPublic) {
       this.onUnauthorized?.()
       throw new ApiError(401, 'необходима авторизация')
     }
@@ -306,8 +315,19 @@ export class ApiClient {
 
   // login is the only unauthenticated call. The returned token is shown once by
   // the server, so the caller must store it — it cannot be fetched again.
-  login(email: string, password: string): Promise<LoginResp> {
+  //
+  // An account with 2FA gets a challenge instead of a token; the session is
+  // then issued by loginMFA once the second factor checks out.
+  login(email: string, password: string): Promise<LoginResult> {
     return this.post('/login', { email, password })
+  }
+
+  loginMFA(body: LoginMFAReq): Promise<LoginResp> {
+    return this.post('/login/mfa', body)
+  }
+
+  loginWebAuthnOptions(mfaToken: string): Promise<PublicKeyOptionsJSON> {
+    return this.post('/login/mfa/webauthn/options', { mfa_token: mfaToken })
   }
 
   logout(): Promise<{ status: string }> {
@@ -320,6 +340,46 @@ export class ApiClient {
 
   changeOwnPassword(oldPassword: string, newPassword: string): Promise<{ status: string }> {
     return this.post('/me/password', { old_password: oldPassword, new_password: newPassword })
+  }
+
+  // Second factors ---------------------------------------------------------
+  // Every change takes the current password: a stolen session alone must not be
+  // enough to bind an attacker's authenticator or strip the owner's.
+
+  getMFA(): Promise<MFAStatus> {
+    return this.get('/me/mfa')
+  }
+
+  setupTOTP(password: string): Promise<TOTPSetup> {
+    return this.post('/me/mfa/totp/setup', { password })
+  }
+
+  confirmTOTP(code: string): Promise<{ recovery_codes?: string[] }> {
+    return this.post('/me/mfa/totp/confirm', { code })
+  }
+
+  disableTOTP(password: string): Promise<{ status: string }> {
+    return this.post('/me/mfa/totp/disable', { password })
+  }
+
+  passkeyOptions(password: string, name: string): Promise<PublicKeyOptionsJSON> {
+    return this.post('/me/mfa/passkeys/options', { password, name })
+  }
+
+  registerPasskey(credential: unknown): Promise<{ passkey: Passkey; recovery_codes?: string[] }> {
+    return this.post('/me/mfa/passkeys', { credential })
+  }
+
+  deletePasskey(id: number, password: string): Promise<void> {
+    return this.request('DELETE', `/me/mfa/passkeys/${id}`, { password })
+  }
+
+  regenerateRecoveryCodes(password: string): Promise<{ recovery_codes: string[] }> {
+    return this.post('/me/mfa/recovery-codes', { password })
+  }
+
+  resetUserMFA(id: number): Promise<User> {
+    return this.post(`/users/${id}/mfa/reset`, {})
   }
 
   listSessions(): Promise<Session[]> {
@@ -350,7 +410,7 @@ export class ApiClient {
     return this.get('/settings')
   }
 
-  updateSettings(body: Partial<Pick<Settings, 'instance_name' | 'ssh_host_key_mode_default'>>): Promise<Settings> {
+  updateSettings(body: Partial<Pick<Settings, 'instance_name' | 'ssh_host_key_mode_default' | 'mfa_required'>>): Promise<Settings> {
     return this.request('PATCH', '/settings', body)
   }
 
