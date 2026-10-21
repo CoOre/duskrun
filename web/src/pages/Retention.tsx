@@ -58,8 +58,8 @@ export default function Retention() {
 
   const last = summary?.last_sweep
   const sweepBtn = canWrite ? (
-    <button style={{ ...btnPrimary, opacity: sweeping ? 0.6 : 1 }} disabled={sweeping} onClick={sweepNow}>
-      <span style={{ fontSize: 14, lineHeight: 1 }}>↻</span>{sweeping ? 'Очистка…' : 'Очистить сейчас'}
+    <button aria-label={sweeping ? 'Очистка…' : 'Очистить сейчас'} style={{ ...btnPrimary, opacity: sweeping ? 0.6 : 1 }} disabled={sweeping} onClick={sweepNow}>
+      <span style={{ fontSize: 14, lineHeight: 1 }}>↻</span><span data-m="hide-s">{sweeping ? 'Очистка…' : 'Очистить сейчас'}</span>
     </button>
   ) : null
 
@@ -97,12 +97,12 @@ export default function Retention() {
       {loading && <div style={MUTED}>Загрузка…</div>}
       {error && <div style={ERRSTYLE} role="alert">{error}</div>}
       {!loading && !error && summary && (
-        <div style={{ padding: '24px 26px' }} className="dc-fade">
+        <div data-m="page" style={{ padding: '24px 26px' }} className="dc-fade">
           {sweepErr && (
             <div style={{ ...ERRSTYLE, padding: '0 0 16px 0' }} role="alert">{sweepErr}</div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
+          <div data-g="1" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
             {cards.map((c) => (
               <div key={c.label} style={{ border: '1px solid var(--line)', borderRadius: 11, padding: '16px 18px', background: 'var(--panel)' }}>
                 <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--ink-3)', fontFamily: MONO, marginBottom: 12 }}>{c.label}</div>
@@ -123,8 +123,8 @@ export default function Retention() {
           )}
 
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>Политики по задачам</div>
-          <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)', marginBottom: 26 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: POLICY_COLS, padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
+          <div data-m="tscroll" style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)', marginBottom: 26 }}>
+            <div data-m="trow" style={{ display: 'grid', gridTemplateColumns: POLICY_COLS, padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
               <div>ЗАДАЧА</div><div>ПОЛИТИКА</div>
               <div style={{ textAlign: 'right' }}>АРТЕФАКТОВ</div>
               <div style={{ textAlign: 'right' }}>ЗАНЯТО</div>
@@ -136,7 +136,7 @@ export default function Retention() {
               const policy = formatPolicy(row.retention)
               const engine = taskEngine(taskById.get(row.task_id), connById)
               return (
-                <div key={row.task_id} style={{ display: 'grid', gridTemplateColumns: POLICY_COLS, padding: '12px 20px', fontSize: 12.5, borderBottom: '1px solid var(--line)', alignItems: 'center' }}>
+                <div data-m="trow" key={row.task_id} style={{ display: 'grid', gridTemplateColumns: POLICY_COLS, padding: '12px 20px', fontSize: 12.5, borderBottom: '1px solid var(--line)', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     {engine ? <EngineDot engine={engine} /> : null}
                     <span style={{ fontWeight: 500, color: row.enabled ? 'var(--ink)' : 'var(--ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</span>
@@ -161,11 +161,11 @@ export default function Retention() {
           </div>
 
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>История очисток</div>
-          <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
+          <div data-m="tscroll" style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
             {sweeps.length === 0 ? (
               <div style={{ padding: '20px', fontSize: 12.5, color: 'var(--ink-3)' }}>Очисток пока не было.</div>
             ) : sweeps.map((s) => (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 20px', borderBottom: '1px solid var(--line)' }}>
+              <div key={s.id} data-m="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 20px', borderBottom: '1px solid var(--line)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
                   <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--ink)', minWidth: 110 }}>{fmtDateTime(s.finished_at)}</span>
                   <StatusBadge status={s.status} />

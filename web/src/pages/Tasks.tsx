@@ -47,8 +47,8 @@ export default function Tasks() {
   }
 
   const createBtn = canWrite ? (
-    <button style={btnPrimary} onClick={() => navigate('/tasks/new')}>
-      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span>Создать задачу
+    <button aria-label="Создать задачу" style={btnPrimary} onClick={() => navigate('/tasks/new')}>
+      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span><span data-m="hide-s">Создать задачу</span>
     </button>
   ) : null
 
@@ -57,12 +57,12 @@ export default function Tasks() {
       {loading && <div style={MUTED}>Загрузка…</div>}
       {error && <div style={ERRSTYLE} role="alert">{error}</div>}
       {!loading && !error && (
-        <div style={{ padding: '24px 26px' }} className="dc-fade">
+        <div data-m="page" style={{ padding: '24px 26px' }} className="dc-fade">
           {tasks.length === 0 ? (
             <div style={MUTED}>Задач пока нет — создайте первую.</div>
           ) : (
-            <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: COLS, padding: '11px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
+            <div data-m="tscroll" style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
+              <div data-m="trow" style={{ display: 'grid', gridTemplateColumns: COLS, padding: '11px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
                 <div>ЗАДАЧА</div><div>СУБД</div><div>РАСПИСАНИЕ</div><div>ПОСЛ. ЗАПУСК</div><div>КОДЕК</div><div style={{ textAlign: 'right' }}>ВКЛ.</div><div />
               </div>
               {tasks.map((t) => {
@@ -70,7 +70,7 @@ export default function Tasks() {
                 const engine = taskEngine(t, connById)
                 const run = lastRun.get(t.id)
                 return (
-                  <div
+                  <div data-m="trow"
                     key={t.id}
                     role="button"
                     tabIndex={0}

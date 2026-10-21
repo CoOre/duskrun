@@ -154,7 +154,7 @@ export default function Settings() {
       {error && <div style={ERRSTYLE} role="alert">{error}</div>}
 
       {!loading && !error && settings && (
-        <div style={{ padding: '24px 26px' }} className="dc-fade">
+        <div data-m="page" style={{ padding: '24px 26px' }} className="dc-fade">
           {err && <div role="alert" style={{ color: 'var(--err)', fontSize: 12.5, marginBottom: 16 }}>{err}</div>}
           {banner && <div role="status" style={{ color: 'var(--ok)', fontSize: 12.5, marginBottom: 16 }}>{banner}</div>}
 
@@ -163,8 +163,8 @@ export default function Settings() {
           {isAdmin && (
             <>
               <div style={SECTION}>Пользователи и доступ</div>
-              <div style={PANEL}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 20px', borderBottom: '1px solid var(--line)' }}>
+              <div data-m="tscroll" style={PANEL}>
+                <div data-m="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 20px', borderBottom: '1px solid var(--line)' }}>
                   <div style={{ minWidth: 0 }}>
                     <label htmlFor="mfa-policy" style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 500 }}>Требовать 2FA</label>
                     <div style={{ fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
@@ -184,11 +184,11 @@ export default function Settings() {
                     ))}
                   </select>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: USER_COLS, padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
+                <div data-m="trow-s" style={{ display: 'grid', gridTemplateColumns: USER_COLS, padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
                   <div>ПОЛЬЗОВАТЕЛЬ</div><div>РОЛЬ</div><div>СОСТОЯНИЕ</div><div>2FA</div><div>ПОСЛЕДНИЙ ВХОД</div><div />
                 </div>
                 {(data?.users ?? []).map((u) => (
-                  <div key={u.id} style={{ display: 'grid', gridTemplateColumns: USER_COLS, padding: '12px 20px', fontSize: 12.5, borderBottom: '1px solid var(--line)', alignItems: 'center', gap: 10 }}>
+                  <div data-m="trow-s" key={u.id} style={{ display: 'grid', gridTemplateColumns: USER_COLS, padding: '12px 20px', fontSize: 12.5, borderBottom: '1px solid var(--line)', alignItems: 'center', gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ color: u.disabled ? 'var(--ink-3)' : 'var(--ink)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</div>
                       {u.name && <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{u.name}</div>}
@@ -237,7 +237,7 @@ export default function Settings() {
               </div>
             ) : (
               (data?.sessions ?? []).map((s) => (
-                <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 20px', borderBottom: '1px solid var(--line)' }}>
+                <div key={s.id} data-m="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 20px', borderBottom: '1px solid var(--line)' }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 12.5, color: 'var(--ink)' }}>
                       {s.email ? `${s.email} · ` : ''}{s.ip || 'адрес неизвестен'}
@@ -266,7 +266,7 @@ export default function Settings() {
           {me && !me.static && (
             <>
               <div style={SECTION}>Мой пароль</div>
-              <div style={{ ...PANEL, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+              <div data-m="wrap" style={{ ...PANEL, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                 <div style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>
                   Смена пароля завершает все остальные сессии этой учётной записи.
                 </div>

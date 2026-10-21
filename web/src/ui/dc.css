@@ -92,3 +92,56 @@ button.dc-reset {
   font-family: inherit;
   color: inherit;
 }
+
+/*
+ * Responsive layer (Dashboard.dc mobile comp). Components tag their blocks with
+ * data-m / data-g; inline styles carry the desktop layout, these rules override
+ * them below the tablet (1024px), phone (760px) and narrow-phone (560px) breakpoints.
+ */
+[data-m=navbackdrop] { display: none; }
+
+@media (max-width: 1024px) {
+  [data-m=sidebar] { position: fixed !important; top: 0; left: 0; bottom: 0; z-index: 50; width: 272px !important; transform: translateX(-100%); transition: transform 0.22s ease; }
+  [data-m=sidebar][data-open=true] { transform: translateX(0); box-shadow: 24px 0 60px oklch(0 0 0 / 0.45); }
+  [data-m=navbackdrop] { display: block; }
+  [data-m=burger] { display: flex !important; }
+  [data-m=stack] { grid-template-columns: minmax(0, 1fr) !important; }
+  [data-m=stackcol] { border-right: none !important; border-bottom: 1px solid var(--line); }
+  [data-m=wizform] { border-right: none !important; }
+  [data-m=hide-t] { display: none !important; }
+  [data-m=kpis] { flex-wrap: wrap; }
+  [data-m=kpi] { flex: 1 1 33% !important; border-bottom: 1px solid var(--line); }
+}
+
+@media (max-width: 760px) {
+  [data-m=root] { height: 100dvh !important; }
+  [data-m=topbar] { padding: 0 12px !important; gap: 8px; }
+  [data-m=topright] { gap: 8px !important; }
+  [data-m=hide-m] { display: none !important; }
+  [data-m=page] { padding: 14px !important; }
+  [data-m=kpi] { flex: 1 1 50% !important; padding: 14px 16px !important; }
+  [data-m=tscroll] { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  [data-m=trow] { min-width: 720px; padding-left: 16px !important; padding-right: 16px !important; }
+  [data-m=trow-s] { min-width: 520px; padding-left: 16px !important; padding-right: 16px !important; }
+  [data-g="1"] { grid-template-columns: minmax(0, 1fr) !important; }
+  [data-g="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  [data-m=wrap] { flex-wrap: wrap; gap: 10px; }
+  [data-m=wrap] > div { flex-wrap: wrap; }
+  [data-m=steps] { overflow-x: auto; }
+  [data-m=step] { flex: 0 0 auto !important; padding: 12px 14px !important; }
+  [data-m=wizform] { padding: 18px 14px !important; }
+  [data-m=navitem] { padding: 11px 12px !important; font-size: 14px !important; }
+  [data-m=modal] { top: auto !important; bottom: 0 !important; left: 0 !important; right: 0; transform: none !important; width: 100% !important; max-width: 100% !important; border-radius: 16px 16px 0 0 !important; max-height: 92dvh !important; overflow-y: auto !important; padding-bottom: env(safe-area-inset-bottom); }
+  [data-m=mfoot] { flex-wrap: wrap; gap: 10px; }
+  [data-m=mfoot] > div:last-child { margin-left: auto; }
+  [data-m=drawer] { width: 100% !important; overflow-y: auto; }
+  [data-m=log] { flex: none !important; min-height: 220px; }
+  /* 16px keeps iOS Safari from zooming into focused fields. */
+  input, select, textarea { font-size: 16px !important; }
+  /* Icon buttons and switches (.dc-reset) keep their drawn size. */
+  button:not(.dc-reset) { min-height: 40px; }
+}
+
+@media (max-width: 560px) {
+  [data-m=hide-s] { display: none !important; }
+}

@@ -269,8 +269,8 @@ function TaskEditorLoaded({
     >
       <div className="dc-fade">
         <Stepper step={step} setStep={setStep} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', alignItems: 'start' }}>
-          <div style={{ padding: '26px 30px', borderRight: '1px solid var(--line)' }}>
+        <div data-m="stack" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', alignItems: 'start' }}>
+          <div data-m="wizform" style={{ padding: '26px 30px', borderRight: '1px solid var(--line)' }}>
             <div style={{ maxWidth: 620 }}>
               {err && <div role="alert" style={ERR_BANNER}>{err}</div>}
               {step === 0 && (
@@ -280,7 +280,7 @@ function TaskEditorLoaded({
                     <input id="te-name" className="dc-input" style={{ ...inputStyle, padding: '10px 12px', fontSize: 13.5 }} value={name} onChange={(e) => setName(e.target.value)} />
                   </Field>
                   <div style={ROW_HEAD}><span>Драйвер СУБД (плагин)</span><span>{ENGINES.length} плагинов доступно</span></div>
-                  <div style={CARD_GRID}>
+                  <div data-g="2" style={CARD_GRID}>
                     {ENGINES.map(([key, label, sub, available]) => (
                       <PluginCard key={key} active={engine === key} disabled={!available || engine !== key} onClick={() => {}}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><EngineDot engine={key} /><b>{label}</b></div>
@@ -315,7 +315,7 @@ function TaskEditorLoaded({
                     )}
                   </Field>
                   )}
-                  <div style={TWO_COL}>
+                  <div data-g="1" style={TWO_COL}>
                     <Field label="Формат дампа" htmlFor="te-format"><select id="te-format" className="dc-select" style={inputStyle} disabled><option>custom (-Fc)</option><option>plain (-Fp)</option><option>directory (-Fd)</option></select></Field>
                     <Field label="Параллельность (jobs)" htmlFor="te-jobs"><input id="te-jobs" className="dc-input" style={inputStyle} disabled value="4" readOnly /></Field>
                   </div>
@@ -333,19 +333,19 @@ function TaskEditorLoaded({
                     </select>
                   </Field>
                   <div style={SECTION_LABEL}>Тип connector'а</div>
-                  <div style={CARD_GRID_3}>
+                  <div data-g="1" style={CARD_GRID_3}>
                     {CONNECTORS.map(([key, label, sub]) => <PluginCard key={key} active={connector === key} disabled={connector !== key}><b>{label}</b><div style={SUB}>{sub}</div></PluginCard>)}
                   </div>
                   {isDockerProxy && (
                     <Field label="Docker network" htmlFor="te-docker-network"><input id="te-docker-network" className="dc-input" style={inputStyle} disabled value={configString(connection?.connector_config, 'network')} readOnly /></Field>
                   )}
-                  <div style={TWO_COL}>
+                  <div data-g="1" style={TWO_COL}>
                     <Field label={isDockerProxy ? 'Хост в Docker network' : 'Хост БД'} htmlFor="te-host"><input id="te-host" className="dc-input" style={inputStyle} disabled value={configString(connection?.connector_config, 'host') || configString(connection?.connector_config, 'remote_host') || configString(connection?.connector_config, 'target_host')} readOnly /></Field>
                     <Field label="Порт" htmlFor="te-port"><input id="te-port" className="dc-input" style={inputStyle} disabled value={configString(connection?.connector_config, 'port') || configString(connection?.connector_config, 'remote_port') || configString(connection?.connector_config, 'target_port')} readOnly /></Field>
                   </div>
                   <div style={SSH_BOX}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: isSSH ? 'var(--accent)' : 'var(--ink-3)', marginBottom: 12, fontFamily: MONO }}>SSH-ТУННЕЛЬ</div>
-                    <div style={{ ...THREE_COL, opacity: isSSH ? 1 : 0.45 }}>
+                    <div data-g="1" style={{ ...THREE_COL, opacity: isSSH ? 1 : 0.45 }}>
                       <Field label="SSH хост" htmlFor="te-ssh-host"><input id="te-ssh-host" className="dc-input" style={inputStyle} disabled value={configString(connection?.connector_config, 'ssh_host')} readOnly /></Field>
                       <Field label="Порт" htmlFor="te-ssh-port"><input id="te-ssh-port" className="dc-input" style={inputStyle} disabled value={configString(connection?.connector_config, 'ssh_port') || '22'} readOnly /></Field>
                       <Field label="Пользователь" htmlFor="te-ssh-user"><input id="te-ssh-user" className="dc-input" style={inputStyle} disabled value={configString(connection?.connector_config, 'ssh_user')} readOnly /></Field>
@@ -359,15 +359,15 @@ function TaskEditorLoaded({
                   <StepHead title="Расписание и исполнение" sub="Cron-выражение и политики запуска." />
                   <Field label="Cron-выражение" htmlFor="te-cron"><input id="te-cron" className="dc-input" style={{ ...inputStyle, padding: '11px 13px', fontSize: 15, borderColor: 'var(--accent)', letterSpacing: '0.05em' }} value={cron} onChange={(e) => setCron(e.target.value)} /></Field>
                   <div style={{ display: 'flex', gap: 8, margin: '-4px 0 22px', flexWrap: 'wrap' }}>{CRON_PRESETS.map(([label, value]) => <button key={value} type="button" onClick={() => setCron(value)} className="dc-reset dc-h-accent-ink" style={CHIP}>{label}</button>)}</div>
-                  <div style={TWO_COL}>
+                  <div data-g="1" style={TWO_COL}>
                     <Field label="Misfire policy" htmlFor="te-misfire"><div style={{ display: 'flex', gap: 8 }}><DisabledPill active>run_once_now</DisabledPill><DisabledPill>skip</DisabledPill></div></Field>
                     <Field label="Таймаут run'а" htmlFor="te-timeout"><input id="te-timeout" className="dc-input" style={inputStyle} value={timeoutSec} onChange={(e) => setTimeoutSec(Number(e.target.value))} /></Field>
                   </div>
-                  <div style={TWO_COL}>
+                  <div data-g="1" style={TWO_COL}>
                     <Field label="Ретраи (попыток)" htmlFor="te-retries"><input id="te-retries" className="dc-input" style={inputStyle} value={retries} onChange={(e) => setRetries(Number(e.target.value))} /></Field>
                     <Field label="Backoff" htmlFor="te-backoff"><input id="te-backoff" className="dc-input" style={inputStyle} disabled value="exp, 30s → 8m" readOnly /></Field>
                   </div>
-                  <div style={TWO_COL}>
+                  <div data-g="1" style={TWO_COL}>
                     <Field label="Watchdog: порог без успешного бэкапа" htmlFor="te-watchdog">
                       <select id="te-watchdog" className="dc-select" style={inputStyle} value={String(watchdogSec)} onChange={(e) => setWatchdogSec(Number(e.target.value))}>
                         {watchdogOptions(watchdogSec).map(([label, value]) => <option key={value} value={value}>{label}</option>)}
@@ -387,7 +387,7 @@ function TaskEditorLoaded({
                     {storages.map((s) => <OptionRow key={s.id} active={storageId === s.id} onClick={() => setStorageId(s.id)} label={s.name} sub={s.type} />)}
                     <OptionRow disabled label="sftp://offsite-nas" sub="SFTP · плагин не подключен" />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22 }}>
+                  <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22 }}>
                     <div><div style={SECTION_LABEL}>Сжатие / формат</div>{COMPRESSION_PRESETS.map((p) => <OptionRow key={p.key} active={compression === p.key} onClick={() => toggleCodec('compression', p.key)} label={p.label} sub={p.sub} />)}</div>
                     <div><div style={SECTION_LABEL}>Шифрование</div>{ENCRYPTION.map(([key, label, sub, available]) => <OptionRow key={key} active={encryption === key} disabled={!available} onClick={() => toggleCodec('encryption', key)} label={label} sub={sub} />)}</div>
                   </div>
@@ -454,7 +454,7 @@ function TaskEditorLoaded({
               </div>
             </div>
           </div>
-          <div style={{ padding: '22px', position: 'sticky', top: 0 }}>
+          <div data-m="hide-t" style={{ padding: '22px', position: 'sticky', top: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--ink-3)', marginBottom: 14, fontFamily: MONO }}>КОНФИГУРАЦИЯ</div>
             {summary.map(([k, v, color]) => <div key={k} style={SUMMARY_ROW}><span>{k}</span><b style={{ color }}>{v}</b></div>)}
           </div>
@@ -465,10 +465,10 @@ function TaskEditorLoaded({
 }
 
 function Stepper({ step, setStep }: { step: number; setStep: (n: number) => void }) {
-  return <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', background: 'var(--panel)' }}>{STEPS.map((label, i) => {
+  return <div data-m="steps" style={{ display: 'flex', borderBottom: '1px solid var(--line)', background: 'var(--panel)' }}>{STEPS.map((label, i) => {
     const active = i === step
     const done = i < step
-    return <div key={label} onClick={() => setStep(i)} style={{ flex: 1, padding: '14px 16px', borderLeft: i ? '1px solid var(--line)' : 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+    return <div key={label} data-m="step" onClick={() => setStep(i)} style={{ flex: 1, padding: '14px 16px', borderLeft: i ? '1px solid var(--line)' : 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
       <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MONO, fontSize: 11, fontWeight: 600, background: active ? 'var(--accent)' : done ? 'var(--ok-bg)' : 'var(--panel-2)', color: active ? 'var(--accent-ink)' : done ? 'var(--ok)' : 'var(--ink-3)', border: `1px solid ${active ? 'var(--accent)' : done ? 'var(--ok)' : 'var(--line-2)'}` }}>{done ? '✓' : i + 1}</div>
       <div style={{ fontSize: 12.5, fontWeight: 600, color: active ? 'var(--ink)' : done ? 'var(--ink-2)' : 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
     </div>

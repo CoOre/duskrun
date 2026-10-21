@@ -48,8 +48,8 @@ export default function Connections() {
   const conns = data ?? []
 
   const createBtn = (
-    canWrite ? <button style={btnPrimary} onClick={() => setOpen(true)}>
-      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span>Соединение
+    canWrite ? <button aria-label="Соединение" style={btnPrimary} onClick={() => setOpen(true)}>
+      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span><span data-m="hide-s">Соединение</span>
     </button> : null
   )
 
@@ -61,7 +61,7 @@ export default function Connections() {
         conns.length === 0 ? (
           <div style={MUTED}>Соединений пока нет.</div>
         ) : (
-          <div style={{ padding: '24px 26px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }} className="dc-fade">
+          <div data-m="page" data-g="1" style={{ padding: '24px 26px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }} className="dc-fade">
             {conns.map((c) => (
               <div
                 key={c.id}
@@ -376,7 +376,7 @@ function ConnectionModal({ initial, onClose, onSaved }: { initial?: Connection; 
           </div>
 
           <div style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 10 }}>Тип СУБД (плагин)</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
+          <div data-g="2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
             {ENGINES.map((o) => (
               <OptionCard key={o.k} active={engine === o.k} onClick={o.enabled ? () => selectEngine(o.k) : undefined} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 11px', opacity: o.enabled ? 1 : 0.45, cursor: o.enabled ? 'pointer' : 'default' }}>
                 <EngineDot engine={o.k} />
@@ -386,7 +386,7 @@ function ConnectionModal({ initial, onClose, onSaved }: { initial?: Connection; 
           </div>
 
           <div style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 10 }}>Тип connector'а</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 20 }}>
+          <div data-g="2" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 20 }}>
             {CONNECTORS.map((o) => (
               <OptionCard key={o.k} active={connectorType === o.k} onClick={() => setConnectorType(o.k)}>
                 <div style={{ fontFamily: MONO, fontSize: 12.5, fontWeight: 600, color: connectorType === o.k ? 'var(--ink)' : 'var(--ink-2)' }}>{o.label}</div>
@@ -408,7 +408,7 @@ function ConnectionModal({ initial, onClose, onSaved }: { initial?: Connection; 
                   <input id="c-docker-network" className="dc-input" style={inputStyle} value={dockerNetwork} onChange={(e) => setDockerNetwork(e.target.value)} placeholder="myapp_default" />
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
                 <div>
                   <label style={labelStyle} htmlFor="c-host">{isDockerProxy ? 'Хост в Docker network' : 'Хост БД'}</label>
                   <input id="c-host" className="dc-input" style={inputStyle} value={host} onChange={(e) => setHost(e.target.value)} placeholder={isDockerProxy ? 'postgres' : '10.0.4.12'} />
@@ -421,7 +421,7 @@ function ConnectionModal({ initial, onClose, onSaved }: { initial?: Connection; 
             </>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 14, marginBottom: isSSH ? 14 : 0 }}>
+          <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 14, marginBottom: isSSH ? 14 : 0 }}>
             <div>
               <label style={labelStyle} htmlFor="c-user">Пользователь БД</label>
               <input id="c-user" className="dc-input" style={inputStyle} value={username} placeholder="backup" onChange={(e) => setUsername(e.target.value)} />
@@ -434,7 +434,7 @@ function ConnectionModal({ initial, onClose, onSaved }: { initial?: Connection; 
           {isSSH && (
             <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16, marginTop: 2 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', marginBottom: 12, fontFamily: MONO }}>SSH-ТУННЕЛЬ</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
                 <div>
                   <label style={labelStyle} htmlFor="c-ssh-host">SSH хост</label>
                   <input id="c-ssh-host" className="dc-input" style={inputStyle} value={sshHost} onChange={(e) => setSshHost(e.target.value)} placeholder="bastion.corp.internal" />
@@ -455,7 +455,7 @@ function ConnectionModal({ initial, onClose, onSaved }: { initial?: Connection; 
           )}
           {testResult && <ConnectionTestPanel result={testResult} />}
         </div>
-        <div style={FOOTER_SPLIT}>
+        <div data-m="mfoot" style={FOOTER_SPLIT}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             {isEdit && <DeleteButton onDelete={remove} />}
             <button type="button" style={{ ...btnSecondary, color: 'var(--ink)', opacity: testBusy ? 0.6 : 1 }} onClick={testConnection} disabled={testBusy}>

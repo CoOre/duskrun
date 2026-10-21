@@ -188,12 +188,12 @@ export default function TaskWizard() {
     <Layout title="Новая задача" subtitle={`шаг ${step + 1} из ${STEPS.length}`} onLogout={logout}>
       <div className="dc-fade">
         {/* Stepper */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', background: 'var(--panel)' }}>
+        <div data-m="steps" style={{ display: 'flex', borderBottom: '1px solid var(--line)', background: 'var(--panel)' }}>
           {STEPS.map((label, i) => {
             const active = i === step
             const done = i < step
             return (
-              <div key={label} onClick={() => setStep(i)} style={{ flex: 1, padding: '14px 16px', borderLeft: i ? '1px solid var(--line)' : 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div key={label} data-m="step" onClick={() => setStep(i)} style={{ flex: 1, padding: '14px 16px', borderLeft: i ? '1px solid var(--line)' : 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MONO, fontSize: 11, fontWeight: 600, background: active ? 'var(--accent)' : done ? 'var(--ok-bg)' : 'var(--panel-2)', color: active ? 'var(--accent-ink)' : done ? 'var(--ok)' : 'var(--ink-3)', border: `1px solid ${active ? 'var(--accent)' : done ? 'var(--ok)' : 'var(--line-2)'}` }}>
                   {done ? '✓' : i + 1}
                 </div>
@@ -203,8 +203,8 @@ export default function TaskWizard() {
           })}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', alignItems: 'start' }}>
-          <div style={{ padding: '26px 30px', borderRight: '1px solid var(--line)' }}>
+        <div data-m="stack" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', alignItems: 'start' }}>
+          <div data-m="wizform" style={{ padding: '26px 30px', borderRight: '1px solid var(--line)' }}>
             <div style={{ maxWidth: 620 }}>
               {error && <div role="alert" style={{ color: 'var(--err)', fontSize: 12.5, marginBottom: 16, padding: '10px 12px', background: 'var(--err-bg)', borderRadius: 7 }}>{error}</div>}
 
@@ -337,7 +337,7 @@ export default function TaskWizard() {
                   {/* One rule or none: the modes are exclusive here, and each
                       keeps its numbers so switching back does not retype them. */}
                   <div style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 600, margin: '0 0 10px' }}>Политика хранения</div>
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+                  <div data-m="wrap" style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
                     {RETENTION_MODES.map(([key, label, sub]) => (
                       <OptionCard key={key} active={mode === key} onClick={() => setMode(key)} style={{ flex: 1, minWidth: 120 }}>
                         <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: mode === key ? 'var(--ink)' : 'var(--ink-2)' }}>{label}</div>
@@ -355,7 +355,7 @@ export default function TaskWizard() {
                       <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginBottom: 10 }}>
                         Самый свежий артефакт в каждом из последних N периодов. 0 — период не хранится.
                       </div>
-                      <div style={{ display: 'flex', gap: 10 }}>
+                      <div data-m="wrap" style={{ display: 'flex', gap: 10 }}>
                         {GFS_FIELDS.map(([key, label]) => (
                           <Field key={key} label={label} htmlFor={`w-gfs-${key}`}>
                             <input
@@ -422,7 +422,7 @@ export default function TaskWizard() {
           </div>
 
           {/* Config summary */}
-          <div style={{ padding: '22px', position: 'sticky', top: 0 }}>
+          <div data-m="hide-t" style={{ padding: '22px', position: 'sticky', top: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--ink-3)', marginBottom: 14, fontFamily: MONO }}>КОНФИГУРАЦИЯ</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {summary.map((s) => (

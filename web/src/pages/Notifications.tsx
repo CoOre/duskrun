@@ -153,8 +153,8 @@ export default function Notifications() {
   }
 
   const createBtn = (
-    canAdmin ? <button style={btnPrimary} onClick={() => setCreating(true)}>
-      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span>Канал
+    canAdmin ? <button aria-label="Канал" style={btnPrimary} onClick={() => setCreating(true)}>
+      <span style={{ fontSize: 14, lineHeight: 1 }}>＋</span><span data-m="hide-s">Канал</span>
     </button> : null
   )
 
@@ -163,7 +163,7 @@ export default function Notifications() {
       {loading && <div style={MUTED}>Загрузка…</div>}
       {loadErr && <div style={ERRSTYLE} role="alert">{loadErr}</div>}
       {!loading && !loadErr && (
-        <div style={{ padding: '24px 26px' }} className="dc-fade">
+        <div data-m="page" style={{ padding: '24px 26px' }} className="dc-fade">
           {error && <div style={{ ...ERRSTYLE, padding: '0 0 16px 0' }} role="alert">{error}</div>}
 
           {channels.length === 0 ? (
@@ -171,7 +171,7 @@ export default function Notifications() {
               Каналов пока нет — события никуда не доставляются.
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 26 }}>
+            <div data-g="1" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 26 }}>
               {channels.map((c) => (
                 <div key={c.id} style={{ border: '1px solid var(--line)', borderRadius: 11, padding: 18, background: 'var(--panel)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10 }}>
@@ -201,18 +201,18 @@ export default function Notifications() {
           )}
 
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>События и каналы</div>
-          <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)', marginBottom: 26 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
+          <div data-m="tscroll" style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)', marginBottom: 26 }}>
+            <div data-m="trow-s" style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
               <div>СОБЫТИЕ</div>
               {channels.map((c) => <div key={c.id} style={{ textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name.toUpperCase()}</div>)}
             </div>
             {EVENT_GROUPS.map((g) => (
               <div key={g.title}>
-                <div style={{ padding: '9px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', fontFamily: MONO, background: 'var(--panel-2)', borderBottom: '1px solid var(--line)' }}>
+                <div data-m="trow-s" style={{ padding: '9px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', fontFamily: MONO, background: 'var(--panel-2)', borderBottom: '1px solid var(--line)' }}>
                   {g.title.toUpperCase()}
                 </div>
                 {g.events.map((ev) => (
-                  <div key={ev.k} style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '11px 20px', borderBottom: '1px solid var(--line)', alignItems: 'center' }}>
+                  <div data-m="trow-s" key={ev.k} style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '11px 20px', borderBottom: '1px solid var(--line)', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                       <div style={{ width: 7, height: 7, borderRadius: '50%', background: ev.dot, flexShrink: 0 }} />
                       <div style={{ minWidth: 0 }}>
@@ -236,11 +236,11 @@ export default function Notifications() {
           </div>
 
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>Недавние уведомления</div>
-          <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
+          <div data-m="tscroll" style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--panel)' }}>
             {log.length === 0 ? (
               <div style={{ padding: 20, fontSize: 12.5, color: 'var(--ink-3)' }}>Отправок пока не было.</div>
             ) : log.map((n) => (
-              <div key={n.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 20px', borderBottom: '1px solid var(--line)' }}>
+              <div key={n.id} data-m="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 20px', borderBottom: '1px solid var(--line)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
                   <span style={{ fontFamily: MONO, fontSize: 11.5, color: 'var(--ink-3)', minWidth: 80 }}>{fmtDateTime(n.created_at)}</span>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: n.status === 'sent' ? 'var(--ok)' : 'var(--err)', flexShrink: 0 }} />
@@ -450,7 +450,7 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
           )}
           {type === 'smtp' && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div data-g="1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 16 }}>
                 <div>
                   <label htmlFor="nc-host" style={labelStyle}>SMTP-хост</label>
                   <input id="nc-host" className="dc-input" style={inputStyle} value={host} onChange={(e) => setHost(e.target.value)} placeholder="smtp.corp.io" />
@@ -513,7 +513,7 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
 
           {err && <div style={{ color: 'var(--err)', fontSize: 12.5, marginTop: 14 }} role="alert">{err}</div>}
         </div>
-        <div style={{ padding: '16px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div data-m="mfoot" style={{ padding: '16px 22px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>{isEdit && onDelete && <DeleteButton onDelete={async () => onDelete()} />}</div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="button" style={btnSecondary} onClick={onClose}>Отмена</button>
