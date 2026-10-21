@@ -488,3 +488,37 @@ func TestTrySweepReportsBusy(t *testing.T) {
 		t.Errorf("TrySweep once free = (ok %v, err %v), want (true, nil)", ok, err)
 	}
 }
+
+// TestSweepReportsWhatItDeleted: the optional sweep report names the task, the
+// count and the space freed; a task with nothing to delete stays quiet.
+func TestSweepReportsWhatItDeleted(t *testing.T) {
+	storage, _ := newLocalfs(t)
+	seedObjects(t, storage, "t/1", "t/2", "t/3")
+	store := &fakeSweepStore{
+		tasks: []Task{
+			{ID: 1, Name: "t", StorageID: 7, Retention: Retention{KeepLast: 1}},
+			{ID: 2, Name: "idle", StorageID: 7, Retention: Retention{KeepLast: 5}},
+		},
+		storages: map[int64]*Storage{7: {ID: 7, Name: "s", Type: "localfs"}},
+		arts: map[int64][]Artifact{1: {
+			{ID: 1, StorageID: 7, Key: "t/1", Size: 100, CreatedAt: ymd(2026, 6, 15)},
+			{ID: 2, StorageID: 7, Key: "t/2", Size: 2048, CreatedAt: ymd(2026, 6, 14)},
+			{ID: 3, StorageID: 7, Key: "t/3", Size: 2048, CreatedAt: ymd(2026, 6, 13)},
+		}},
+	}
+	spy := &spyNotifier{}
+	sweeper := NewSweeper(store, SweeperConfig{
+		Now:         func() time.Time { return sweepNow },
+		Notify:      testNotifications(spy),
+		OpenStorage: func(context.Context, *Storage) (plugin.Storage, error) { return storage, nil },
+	}, nil)
+	if _, err := sweeper.Sweep(context.Background(), SweepSchedule); err != nil {
+		t.Fatal(err)
+	}
+	if len(spy.events) != 1 || spy.events[0].Kind != plugin.EventRetentionDone || spy.events[0].Task != "t" {
+		t.Fatalf("events = %+v, want one retention_done for t", spy.events)
+	}
+	if want := "удалено 2 бэкапа, освобождено 4.0 КБ"; spy.events[0].Message != want {
+		t.Errorf("message = %q, want %q", spy.events[0].Message, want)
+	}
+}

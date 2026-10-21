@@ -134,6 +134,10 @@ func (s *Sweeper) sweepLocked(ctx context.Context, source SweepSource) (Sweep, e
 			errs = append(errs, fmt.Errorf("task %q: %w", task.Name, err))
 			s.notifyError(ctx, task, err)
 		}
+		if deleted > 0 {
+			s.notify.Send(ctx, task, plugin.EventRetentionDone, 0, fmt.Sprintf("удалено %d %s, освобождено %s",
+				deleted, plural(int64(deleted), "бэкап", "бэкапа", "бэкапов"), HumanBytes(freed)))
+		}
 		if ctx.Err() != nil {
 			errs = append(errs, ctx.Err())
 			break

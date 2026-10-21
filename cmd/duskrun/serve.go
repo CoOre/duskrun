@@ -91,6 +91,9 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 	// One delivery service for every event source: worker, sweeper and watchdog
 	// resolve the same configured channels and record the same delivery log.
 	notes := core.NewNotifications(st, box, core.NotificationsConfig{Now: time.Now}, log)
+	// Runs the reap above cut short are otherwise visible only in the history:
+	// the restart that interrupted them may have happened at 3am unattended.
+	core.ReportInterrupted(ctx, st, notes, reaped, time.Now(), log)
 
 	disp := core.NewDispatcher(st, time.Now, log)
 	pool := core.NewPool(st, exec, core.PoolConfig{Workers: cfg.WorkerLimit, Notify: notes}, log)
