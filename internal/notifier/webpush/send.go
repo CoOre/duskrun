@@ -33,24 +33,30 @@ var ErrNoSubscribers = errors.New("push: no subscribed browsers")
 // an event.
 const KindTest = "test"
 
-// Payload is what the service worker receives. It renders the title from Kind
-// and Task itself, so the wording lives in one place with the rest of the UI.
+// Payload is what the service worker receives. Title is rendered here, with
+// the same wording every other channel uses; the worker keeps its own titles
+// only as a fallback.
 type Payload struct {
 	Kind    string    `json:"kind"`
 	Task    string    `json:"task"`
+	Subject string    `json:"subject,omitempty"`
+	Title   string    `json:"title"`
 	RunID   int64     `json:"run_id,omitempty"`
 	Message string    `json:"message"`
 	At      time.Time `json:"at"`
 	// URL is the page a click on the notification opens.
 	URL string `json:"url"`
+	// Urgent keeps the notification on screen until it is dismissed.
+	Urgent bool `json:"urgent"`
 }
 
 // Payload size caps. A push message is limited to 4 KB, and the library pads
 // every record to exactly that, so the plaintext must stay under about 3.9 KB.
 // These leave room for the JSON around them even if every byte were escaped.
 const (
-	maxMessageBytes = 1800
+	maxMessageBytes = 1600
 	maxTaskBytes    = 200
+	maxTitleBytes   = 260
 )
 
 // concurrency bounds simultaneous requests during one broadcast.
@@ -61,20 +67,27 @@ func payloadFor(ev plugin.Event) Payload {
 	p := Payload{
 		Kind:    string(ev.Kind),
 		Task:    truncate(ev.Task, maxTaskBytes),
+		Subject: truncate(ev.Subject, maxTaskBytes),
+		Title:   truncate(plugin.Title(ev), maxTitleBytes),
 		RunID:   ev.RunID,
 		Message: truncate(ev.Message, maxMessageBytes),
 		At:      ev.At,
 		URL:     "/",
+		Urgent:  ev.Kind.Severity() != plugin.SeverityInfo,
 	}
 	switch {
-	case ev.RunID != 0:
-		p.URL = fmt.Sprintf("/history?at=%d", ev.RunID)
-	case ev.Kind == plugin.EventRetentionError:
-		p.URL = "/retention"
-	case ev.Kind == plugin.EventSuccess:
+	case ev.IsTest():
 		// A real success always names its run; one without is the channel
 		// test, and must not show up on a phone as a completed backup.
 		p.Kind, p.Task, p.URL = KindTest, "", "/notifications"
+	case ev.RunID != 0:
+		p.URL = fmt.Sprintf("/history?at=%d", ev.RunID)
+	case ev.Kind == plugin.EventRetentionError || ev.Kind == plugin.EventRetentionDone:
+		p.URL = "/retention"
+	case ev.Kind == plugin.EventStorageLow || ev.Kind == plugin.EventStorageUnreachable:
+		p.URL = "/storages"
+	case ev.Kind == plugin.EventSecurity:
+		p.URL = "/settings"
 	}
 	return p
 }
@@ -103,9 +116,9 @@ func (s *Service) options(p Payload) *webpush.Options {
 		VAPIDPrivateKey: s.privateKey,
 		TTL:             int((24 * time.Hour).Seconds()),
 		Urgency:         webpush.UrgencyHigh,
-		Topic:           topic(p.Kind, p.Task),
+		Topic:           topic(p.Kind, p.Task+"\x00"+p.Subject),
 	}
-	if p.Kind == string(plugin.EventSuccess) {
+	if !p.Urgent {
 		o.TTL = int(time.Hour.Seconds())
 		o.Urgency = webpush.UrgencyNormal
 	}

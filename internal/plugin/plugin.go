@@ -141,17 +141,14 @@ type Event struct {
 	RunID   int64
 	Message string
 	At      time.Time
+	// Subject names what a system event is about — a storage, a user — when
+	// there is no task behind it. Task events leave it empty.
+	Subject string
 }
 
-// EventKind enumerates notifiable events (TZ §5.5).
+// EventKind enumerates notifiable events (TZ §5.5). The closed list with
+// titles and severities lives in events.go.
 type EventKind string
-
-const (
-	EventSuccess        EventKind = "success"
-	EventFailure        EventKind = "failure"
-	EventRetentionError EventKind = "retention_error"
-	EventWatchdog       EventKind = "watchdog" // v1
-)
 
 // Notifier delivers an Event to one channel (telegram/webhook/email).
 type Notifier interface {

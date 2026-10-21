@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/CoOre/duskrun/internal/plugin"
@@ -91,8 +92,19 @@ func (n *Notifier) Notify(ctx context.Context, ev plugin.Event) error {
 	return nil
 }
 
+// formatEvent leads with the headline, so a chat list preview says what
+// happened; the message and the run follow on their own lines.
 func formatEvent(ev plugin.Event) string {
-	return fmt.Sprintf("duskrun [%s] task=%s run=%d: %s", ev.Kind, ev.Task, ev.RunID, ev.Message)
+	var b strings.Builder
+	b.WriteString(plugin.Title(ev))
+	if ev.Message != "" {
+		b.WriteString("\n")
+		b.WriteString(ev.Message)
+	}
+	if ev.RunID != 0 {
+		fmt.Fprintf(&b, "\nЗапуск #%d", ev.RunID)
+	}
+	return b.String()
 }
 
 // withoutURL drops the request URL from net/http errors: *url.Error prints it

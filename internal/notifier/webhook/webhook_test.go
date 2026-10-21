@@ -22,7 +22,10 @@ func TestWebhookNotify(t *testing.T) {
 	}
 
 	var gotCT string
-	var got plugin.Event
+	var got struct {
+		plugin.Event
+		Title string
+	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotCT = r.Header.Get("Content-Type")
 		body, _ := io.ReadAll(r.Body)
@@ -43,6 +46,9 @@ func TestWebhookNotify(t *testing.T) {
 	}
 	if got.Task != want.Task || got.RunID != want.RunID || got.Kind != want.Kind || got.Message != want.Message {
 		t.Fatalf("received event = %+v, want %+v", got, want)
+	}
+	if got.Title != "✗ orders: бэкап не выполнен" {
+		t.Errorf("title = %q, want the shared headline", got.Title)
 	}
 }
 

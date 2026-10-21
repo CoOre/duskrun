@@ -290,13 +290,16 @@ func TestSendEncryptsAndSigns(t *testing.T) {
 	if err := json.Unmarshal(b.decrypt(t, r.body), &got); err != nil {
 		t.Fatal(err)
 	}
-	want := Payload{Kind: "failure", Task: "pg-main", RunID: 42, Message: failureEvent.Message, At: failureEvent.At, URL: "/history?at=42"}
+	want := Payload{
+		Kind: "failure", Task: "pg-main", Title: "✗ pg-main: бэкап не выполнен", RunID: 42,
+		Message: failureEvent.Message, At: failureEvent.At, URL: "/history?at=42", Urgent: true,
+	}
 	if got != want {
 		t.Fatalf("payload = %+v\nwant      %+v", got, want)
 	}
 
 	for k, v := range map[string]string{
-		"Content-Encoding": "aes128gcm", "TTL": "86400", "Urgency": "high", "Topic": topic("failure", "pg-main"),
+		"Content-Encoding": "aes128gcm", "TTL": "86400", "Urgency": "high", "Topic": topic("failure", "pg-main\x00"),
 	} {
 		if r.header.Get(k) != v {
 			t.Errorf("%s = %q, want %q", k, r.header.Get(k), v)
@@ -558,5 +561,45 @@ func TestRegister(t *testing.T) {
 	Register(off, svc)
 	if _, err := off.Create(Type, nil); err == nil || !strings.Contains(err.Error(), "DUSKRUN_PUBLIC_URL") {
 		t.Fatalf("unavailable push: err = %v; want the reason", err)
+	}
+}
+
+// TestSecurityGoesToAdminsOnly: a channel open to every viewer still keeps who
+// signed in from where to administrators.
+func TestSecurityGoesToAdminsOnly(t *testing.T) {
+	ps := newPushServer(t)
+	st := newMemStore()
+	svc := newService(t, st, ps)
+	st.subs = []core.PushSubscription{
+		newBrowser(t).sub(1, ps.URL+"/viewer", core.RoleViewer),
+		newBrowser(t).sub(3, ps.URL+"/admin", core.RoleAdmin),
+	}
+	n := &Notifier{svc: svc, minRole: core.RoleViewer}
+	ev := plugin.Event{Kind: plugin.EventSecurity, Subject: "a@x.io", Message: "вход с нового устройства", At: failureEvent.At}
+	if err := n.Notify(context.Background(), ev); err != nil {
+		t.Fatal(err)
+	}
+	reqs := ps.requests()
+	if len(reqs) != 1 || reqs[0].path != "/admin" {
+		t.Fatalf("delivered to %d browsers; want the admin's only", len(reqs))
+	}
+}
+
+func TestPayloadForSystemEvents(t *testing.T) {
+	for _, tc := range []struct {
+		ev            plugin.Event
+		url           string
+		urgent        bool
+		titleContains string
+	}{
+		{plugin.Event{Kind: plugin.EventStorageLow, Subject: "nas"}, "/storages", true, "nas"},
+		{plugin.Event{Kind: plugin.EventSecurity, Subject: "a@x.io"}, "/settings", true, "a@x.io"},
+		{plugin.Event{Kind: plugin.EventRetentionDone, Task: "pg"}, "/retention", false, "pg"},
+		{plugin.Event{Kind: plugin.EventRecovered, Task: "pg", RunID: 9}, "/history?at=9", false, "снова в порядке"},
+	} {
+		p := payloadFor(tc.ev)
+		if p.URL != tc.url || p.Urgent != tc.urgent || !strings.Contains(p.Title, tc.titleContains) {
+			t.Errorf("%s: payload = %+v", tc.ev.Kind, p)
+		}
 	}
 }

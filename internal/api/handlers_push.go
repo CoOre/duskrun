@@ -28,7 +28,7 @@ type PushService interface {
 const maxUserAgent = 300
 
 // eventTest is the kind of a notification sent to one device by hand. It is
-// never a channel subscription, so it is not in eventKinds.
+// never a channel subscription, so it is not in plugin.EventKinds.
 const eventTest = plugin.EventKind(webpush.KindTest)
 
 type pushStatusDTO struct {

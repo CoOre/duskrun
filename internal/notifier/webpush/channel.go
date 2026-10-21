@@ -57,6 +57,12 @@ type Notifier struct {
 func (n *Notifier) Name() string { return Type }
 
 // Notify broadcasts the event to the browsers of users at or above minRole.
+// Security events go to administrators only, whatever the channel's audience:
+// who logged in from where is not for every viewer's phone.
 func (n *Notifier) Notify(ctx context.Context, ev plugin.Event) error {
-	return n.svc.Broadcast(ctx, n.minRole, ev)
+	role := n.minRole
+	if ev.Kind == plugin.EventSecurity {
+		role = core.RoleAdmin
+	}
+	return n.svc.Broadcast(ctx, role, ev)
 }
