@@ -61,12 +61,35 @@ func (h *spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The service worker and the web app manifest keep fixed names, so they
+	// must be revalidated: a cached sw.js would keep an old worker running
+	// after an upgrade. A missing one is a 404 like a missing asset — the
+	// browser would reject index.html as a script anyway, with a less useful
+	// error.
+	if ctype, ok := revalidated[upath]; ok {
+		if h.placeholder || !h.exists(upath) {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Content-Type", ctype)
+		h.files.ServeHTTP(w, r)
+		return
+	}
+
 	if upath == "" || !h.exists(upath) {
 		// Root, or an unknown path → SPA fallback (client-side routing).
 		h.serveIndex(w)
 		return
 	}
 	h.files.ServeHTTP(w, r)
+}
+
+// revalidated maps the fixed-name files a browser must re-check on every load
+// to their content types. Go's mime table has no entry for .webmanifest.
+var revalidated = map[string]string{
+	"sw.js":                "text/javascript; charset=utf-8",
+	"manifest.webmanifest": "application/manifest+json",
 }
 
 // exists reports whether upath names a regular file in the embedded FS.

@@ -142,3 +142,42 @@ func TestEmbeddedPlaceholderNeverReferencesAssets(t *testing.T) {
 		t.Fatal("placeholder.html references /assets/ — those filenames are generated and gitignored")
 	}
 }
+
+// TestServiceWorkerIsRevalidated: sw.js and the manifest keep fixed names, so
+// a cached copy would pin an old worker past an upgrade; and the manifest needs
+// a type Go's mime table does not know.
+func TestServiceWorkerIsRevalidated(t *testing.T) {
+	fsys := builtFS()
+	fsys["sw.js"] = &fstest.MapFile{Data: []byte("self.addEventListener('push', () => {})")}
+	fsys["manifest.webmanifest"] = &fstest.MapFile{Data: []byte(`{"name":"Duskrun"}`)}
+	srv := httptest.NewServer(handlerFor(fsys))
+	defer srv.Close()
+
+	for path, wantType := range map[string]string{
+		"/sw.js":                "text/javascript",
+		"/manifest.webmanifest": "application/manifest+json",
+	} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK || !strings.HasPrefix(resp.Header.Get("Content-Type"), wantType) {
+			t.Errorf("%s: status %d, type %q; want 200 %s", path, resp.StatusCode, resp.Header.Get("Content-Type"), wantType)
+		}
+		if cc := resp.Header.Get("Cache-Control"); cc != "no-cache" {
+			t.Errorf("%s: cache-control %q, want no-cache", path, cc)
+		}
+	}
+}
+
+// TestMissingServiceWorkerIs404: index.html in its place would make the
+// browser fail registration on MIME type, with nothing on the server side.
+func TestMissingServiceWorkerIs404(t *testing.T) {
+	if status, _, _ := get(t, handlerFor(builtFS()), "/sw.js"); status != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", status)
+	}
+	if status, _, _ := get(t, handlerFor(unbuiltFS()), "/sw.js"); status != http.StatusNotFound {
+		t.Fatalf("unbuilt: status = %d, want 404", status)
+	}
+}
