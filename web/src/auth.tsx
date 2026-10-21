@@ -39,7 +39,9 @@ export function AuthProvider({
 }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
   const [me, setMe] = useState<Me | null>(null)
-  const [loadingMe, setLoadingMe] = useState(false)
+  // Starts true when a token is already stored, so the very first render can
+  // wait for /me instead of mounting pages that the MFA policy may forbid.
+  const [loadingMe, setLoadingMe] = useState(() => !!localStorage.getItem(TOKEN_KEY))
   const [meEpoch, setMeEpoch] = useState(0)
 
   const login = useCallback((t: string) => {

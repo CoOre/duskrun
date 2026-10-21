@@ -2,9 +2,10 @@ import { FormEvent, useState } from 'react'
 import { ApiError } from '../api/client'
 import { useApiData } from '../api/useApiData'
 import { fmtDateTime } from '../api/view'
-import type { Role, Session, Settings as SettingsData, User } from '../api/types'
+import type { MFAPolicy, Role, Session, Settings as SettingsData, User } from '../api/types'
 import { useAuth, useCan } from '../auth'
 import { Layout } from '../ui/Layout'
+import { MFASettings } from '../ui/MFASettings'
 import { ModalShell } from '../ui/ModalShell'
 import { MONO, btnDanger, btnPrimary, btnSecondary, inputStyle, labelStyle } from '../ui/dc'
 
@@ -26,7 +27,25 @@ const SECTION: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: 'va
 const PANEL: React.CSSProperties = { border: '1px solid var(--line)', borderRadius: 10, background: 'var(--panel)', marginBottom: 26 }
 const MUTED: React.CSSProperties = { padding: 26, fontSize: 13, color: 'var(--ink-3)' }
 const ERRSTYLE: React.CSSProperties = { padding: 26, fontSize: 13, color: 'var(--err)' }
-const USER_COLS = '1.6fr 1fr 0.8fr 1fr auto'
+const USER_COLS = '1.6fr 1fr 0.8fr 0.9fr 1fr auto'
+
+const POLICY_LABEL: Record<MFAPolicy, string> = {
+  off: 'не требовать',
+  admins: 'для администраторов',
+  all: 'для всех пользователей',
+}
+
+// mfaLabel summarises a user's second factors for the admin table.
+function mfaLabel(u: User): string | null {
+  const parts: string[] = []
+  if (u.mfa_totp) parts.push('TOTP')
+  if (u.mfa_passkeys) parts.push(`${u.mfa_passkeys} passkey`)
+  return parts.length ? parts.join(' + ') : null
+}
+
+function hasMFA(u: User): boolean {
+  return !!u.mfa_totp || (u.mfa_passkeys ?? 0) > 0
+}
 
 export default function Settings() {
   const { api, logout, me, refreshMe } = useAuth()
@@ -36,6 +55,7 @@ export default function Settings() {
   const [err, setErr] = useState<string | null>(null)
   const [userModal, setUserModal] = useState<'new' | User | null>(null)
   const [pwModal, setPwModal] = useState(false)
+  const [resetMfa, setResetMfa] = useState<User | null>(null)
 
   const { data, error, loading } = useApiData<Data>(async () => {
     // Only an admin may list users; a viewer asking would get a 403 and blank
@@ -56,7 +76,7 @@ export default function Settings() {
     setBanner(null)
   }
 
-  async function saveSettings(patch: Partial<Pick<SettingsData, 'instance_name' | 'ssh_host_key_mode_default'>>) {
+  async function saveSettings(patch: Partial<Pick<SettingsData, 'instance_name' | 'ssh_host_key_mode_default' | 'mfa_required'>>) {
     setErr(null)
     try {
       await api.updateSettings(patch)
@@ -89,6 +109,19 @@ export default function Settings() {
       bump()
     } catch (e) {
       report(e)
+    }
+  }
+
+  async function resetUserMFA(u: User) {
+    setErr(null)
+    try {
+      await api.resetUserMFA(u.id)
+      setBanner(`2FA пользователя ${u.email} сброшена, его сессии завершены`)
+      bump()
+    } catch (e) {
+      report(e)
+    } finally {
+      setResetMfa(null)
     }
   }
 
@@ -130,8 +163,28 @@ export default function Settings() {
             <>
               <div style={SECTION}>Пользователи и доступ</div>
               <div style={PANEL}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 20px', borderBottom: '1px solid var(--line)' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <label htmlFor="mfa-policy" style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 500 }}>Требовать 2FA</label>
+                    <div style={{ fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                      Без второго фактора такие пользователи после входа попадут на экран
+                      подключения 2FA. API-токен инстанса политика не затрагивает.
+                    </div>
+                  </div>
+                  <select
+                    id="mfa-policy"
+                    value={settings.mfa_required ?? 'off'}
+                    onChange={(e) => saveSettings({ mfa_required: e.target.value as MFAPolicy })}
+                    className="dc-input"
+                    style={{ ...inputStyle, width: 220, flexShrink: 0 }}
+                  >
+                    {(['off', 'admins', 'all'] as MFAPolicy[]).map((p) => (
+                      <option key={p} value={p}>{POLICY_LABEL[p]}</option>
+                    ))}
+                  </select>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: USER_COLS, padding: '10px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', fontFamily: MONO }}>
-                  <div>ПОЛЬЗОВАТЕЛЬ</div><div>РОЛЬ</div><div>СОСТОЯНИЕ</div><div>ПОСЛЕДНИЙ ВХОД</div><div />
+                  <div>ПОЛЬЗОВАТЕЛЬ</div><div>РОЛЬ</div><div>СОСТОЯНИЕ</div><div>2FA</div><div>ПОСЛЕДНИЙ ВХОД</div><div />
                 </div>
                 {(data?.users ?? []).map((u) => (
                   <div key={u.id} style={{ display: 'grid', gridTemplateColumns: USER_COLS, padding: '12px 20px', fontSize: 12.5, borderBottom: '1px solid var(--line)', alignItems: 'center', gap: 10 }}>
@@ -143,6 +196,9 @@ export default function Settings() {
                     <div style={{ fontSize: 11.5, color: u.disabled ? 'var(--warn)' : 'var(--ink-3)', fontFamily: MONO }}>
                       {u.disabled ? 'отключён' : 'активен'}
                     </div>
+                    <div style={{ fontSize: 11, color: hasMFA(u) ? 'var(--ok)' : 'var(--ink-3)', fontFamily: MONO }}>
+                      {mfaLabel(u) ?? '—'}
+                    </div>
                     <div style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: MONO }}>
                       {u.last_login_at ? fmtDateTime(u.last_login_at) : 'ни разу'}
                     </div>
@@ -150,6 +206,11 @@ export default function Settings() {
                       <button type="button" style={{ ...btnSecondary, padding: '5px 10px', fontSize: 11.5 }} onClick={() => setUserModal(u)}>
                         Изменить
                       </button>
+                      {hasMFA(u) && u.id !== me?.user_id && (
+                        <button type="button" style={{ ...btnSecondary, padding: '5px 10px', fontSize: 11.5 }} onClick={() => setResetMfa(u)}>
+                          Сбросить 2FA
+                        </button>
+                      )}
                       <button
                         type="button"
                         style={{ ...btnSecondary, padding: '5px 10px', fontSize: 11.5 }}
@@ -213,6 +274,13 @@ export default function Settings() {
             </>
           )}
 
+          {me && !me.static && (
+            <>
+              <div style={SECTION}>Двухфакторная аутентификация</div>
+              <MFASettings onChange={() => { refreshMe(); bump() }} />
+            </>
+          )}
+
           <div style={SECTION}>Инстанс</div>
           <div style={{ ...PANEL, padding: '4px 20px 12px' }}>
             <InstanceRow label="Версия" value={settings.instance.version} source="сборка" />
@@ -242,6 +310,22 @@ export default function Settings() {
           onSaved={(msg) => { setUserModal(null); setBanner(msg); setErr(null); bump() }}
           onError={report}
         />
+      )}
+      {resetMfa && (
+        <ModalShell title="Сбросить 2FA" onClose={() => setResetMfa(null)}>
+          <div style={{ padding: '20px 22px' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 20 }}>
+              У <b>{resetMfa.email}</b> будут удалены приложение-аутентификатор, все passkeys
+              и коды восстановления, а все его сессии — завершены. Войти он сможет по
+              паролю{settings?.mfa_required && settings.mfa_required !== 'off' ? ' и сразу будет вынужден подключить 2FA заново' : ''}.
+              Делайте это, только убедившись, что просит сам владелец.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" style={btnSecondary} onClick={() => setResetMfa(null)}>Отмена</button>
+              <button type="button" style={btnDanger} onClick={() => resetUserMFA(resetMfa)}>Сбросить 2FA</button>
+            </div>
+          </div>
+        </ModalShell>
       )}
       {pwModal && (
         <PasswordModal

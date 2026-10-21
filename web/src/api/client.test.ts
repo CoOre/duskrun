@@ -23,6 +23,37 @@ function sseResponse(chunks: string[]): Response {
 }
 
 describe('ApiClient', () => {
+  test('TestLoginMFA401KeepsCredential: a wrong second-factor code is not a dead session', async () => {
+    const onUnauthorized = vi.fn()
+    const fetchImpl = vi.fn().mockImplementation(async () => jsonResponse({ error: 'invalid code' }, 401))
+    const client = new ApiClient({ getToken: () => null, onUnauthorized, fetchImpl })
+
+    await expect(client.loginMFA({ mfa_token: 't', method: 'totp', code: '000000' })).rejects.toMatchObject({ status: 401 })
+    await expect(client.login('a@corp.io', 'x')).rejects.toMatchObject({ status: 401 })
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  test('TestDeletePasskeySendsPassword: DELETE carries a JSON body', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
+    const client = new ApiClient({ getToken: () => 't', fetchImpl })
+
+    await client.deletePasskey(4, 'pw')
+
+    const [url, init] = fetchImpl.mock.calls[0]
+    expect(url).toBe('/api/me/mfa/passkeys/4')
+    expect(init.method).toBe('DELETE')
+    expect(JSON.parse(init.body)).toEqual({ password: 'pw' })
+  })
+
+  test('TestSession401StillLogsOut: other routes keep the old behaviour', async () => {
+    const onUnauthorized = vi.fn()
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ error: 'unauthorized' }, 401))
+    const client = new ApiClient({ getToken: () => 't', onUnauthorized, fetchImpl })
+
+    await expect(client.getMFA()).rejects.toBeInstanceOf(ApiError)
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+  })
+
   test('TestClientAddsBearer: attaches the bearer token', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse([]))
     const client = new ApiClient({ getToken: () => 'tok-123', fetchImpl })
