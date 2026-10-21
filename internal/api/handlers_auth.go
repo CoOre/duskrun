@@ -173,7 +173,8 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !ok {
-		delay := s.limiter.fail(keys...)
+		delay, locked := s.limiter.fail(keys...)
+		s.reportLockout(ctx, locked, email, clientIP(r, s.d.TrustProxy), "неверный пароль")
 		select {
 		case <-time.After(delay):
 		case <-ctx.Done():
@@ -217,6 +218,7 @@ func (s *server) issueSession(w http.ResponseWriter, r *http.Request, user *core
 		// Cosmetic field; a failure here must not cost the user their login.
 		s.d.Log.Warn("stamp last_login_at", "user", user.ID, "err", err)
 	}
+	s.noteDevice(ctx, user, sess.UserAgent, sess.IP)
 
 	// The token is returned exactly once — only its hash is persisted.
 	writeJSON(w, http.StatusOK, loginResp{
@@ -297,6 +299,9 @@ func (s *server) changeOwnPassword(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, msg)
 		return
 	}
+	// A stolen session changing the password is how an account is taken
+	// over for good, so the owner should hear about it either way.
+	s.securityEvent(ctx, p.User.Email, "пароль изменён из настроек учётной записи")
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 

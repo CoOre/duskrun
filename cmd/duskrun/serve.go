@@ -94,6 +94,10 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 	// Runs the reap above cut short are otherwise visible only in the history:
 	// the restart that interrupted them may have happened at 3am unattended.
 	core.ReportInterrupted(ctx, st, notes, reaped, time.Now(), log)
+	// Devices unseen for half a year count as new again on their next login.
+	if _, err := st.PruneKnownDevices(ctx, time.Now().Add(-knownDeviceTTL)); err != nil {
+		log.Warn("prune known devices", "err", err)
+	}
 
 	disp := core.NewDispatcher(st, time.Now, log)
 	pool := core.NewPool(st, exec, core.PoolConfig{Workers: cfg.WorkerLimit, Notify: notes}, log)
@@ -154,3 +158,6 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 
 	return eng.Run(ctx)
 }
+
+// knownDeviceTTL is how long a sign-in location stays known without use.
+const knownDeviceTTL = 180 * 24 * time.Hour
