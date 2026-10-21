@@ -2,12 +2,13 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import { useApiData } from '../api/useApiData'
 import { fmtDateTime } from '../api/view'
-import type { CreateNotifierReq, EventKind, Notification, NotifierChannel } from '../api/types'
+import type { CreateNotifierReq, EventKind, Notification, NotifierChannel, PushStatus, Role } from '../api/types'
 import { useAuth, useCan } from '../auth'
 import { Layout } from '../ui/Layout'
 import { DeleteButton, MONO, OptionCard, Toggle, btnPrimary, btnSecondary, inputStyle, labelStyle } from '../ui/dc'
 import { ModalShell } from '../ui/ModalShell'
 import { SecretPicker } from '../ui/SecretPicker'
+import { unavailableText } from '../push'
 
 // Channel plugins registered in the backend (internal/notifier/*).
 const CHANNEL_TYPES: { k: string; label: string; sub: string }[] = [
@@ -15,6 +16,14 @@ const CHANNEL_TYPES: { k: string; label: string; sub: string }[] = [
   { k: 'telegram', label: 'Telegram', sub: 'Bot API' },
   { k: 'webhook', label: 'Webhook', sub: 'POST JSON' },
   { k: 'smtp', label: 'Email', sub: 'SMTP' },
+  { k: 'push', label: 'Браузер', sub: 'Web Push' },
+]
+
+// Who a push channel reaches: the lowest role whose browsers get its events.
+const PUSH_AUDIENCES: { k: Role; label: string }[] = [
+  { k: 'viewer', label: 'Все пользователи' },
+  { k: 'operator', label: 'Операторы и администраторы' },
+  { k: 'admin', label: 'Только администраторы' },
 ]
 
 // TLS modes the smtp plugin accepts. The mode is explicit rather than derived
@@ -275,6 +284,18 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
   const [username, setUsername] = useState(str(cfg.username))
   const [passwordRef, setPasswordRef] = useState(str(cfg.password_ref))
   const [tlsMode, setTlsMode] = useState(str(cfg.tls, TLS_MODES[0].k))
+  const [minRole, setMinRole] = useState(str(cfg.min_role, 'viewer'))
+  // Whether the instance can send push at all. Asked up front so the form can
+  // say why instead of letting the save fail; the server refuses it either way.
+  const [push, setPush] = useState<PushStatus | null>(null)
+  useEffect(() => {
+    let alive = true
+    api.pushStatus().then((v) => alive && setPush(v)).catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [api])
+  const pushOff = type === 'push' && push !== null && !push.available
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -294,6 +315,7 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
       if (passwordRef.trim()) c.password_ref = passwordRef.trim()
       return c
     }
+    if (type === 'push') return { min_role: minRole }
     return {}
   }
 
@@ -426,6 +448,22 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
               )}
             </>
           )}
+          {type === 'push' && (
+            <>
+              {pushOff && (
+                <div role="alert" style={{ fontSize: 12, color: 'var(--warn)', marginBottom: 14 }}>
+                  Push недоступен на этом инстансе. {unavailableText(push?.reason)}
+                </div>
+              )}
+              <label htmlFor="nc-audience" style={labelStyle}>Получатели</label>
+              <select id="nc-audience" className="dc-select" style={{ ...inputStyle, marginBottom: 10 }} value={minRole} onChange={(e) => setMinRole(e.target.value)}>
+                {PUSH_AUDIENCES.map((a) => <option key={a.k} value={a.k}>{a.label}</option>)}
+              </select>
+              <div style={{ fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                Уведомление получат браузеры, где пользователь включил push: «Настройки → Уведомления в браузере».
+              </div>
+            </>
+          )}
           {type === 'log' && (
             <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>Пишет события в журнал демона. Настраивать нечего.</div>
           )}
@@ -436,7 +474,7 @@ function ChannelModal({ initial, onClose, onSaved, onDelete }: {
           <div>{isEdit && onDelete && <DeleteButton onDelete={async () => onDelete()} />}</div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="button" style={btnSecondary} onClick={onClose}>Отмена</button>
-            <button type="submit" style={{ ...btnPrimary, opacity: busy ? 0.6 : 1 }} disabled={busy}>
+            <button type="submit" style={{ ...btnPrimary, opacity: busy || pushOff ? 0.6 : 1 }} disabled={busy || pushOff}>
               {busy ? 'Сохранение…' : isEdit ? 'Сохранить' : 'Создать'}
             </button>
           </div>

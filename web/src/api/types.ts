@@ -413,3 +413,33 @@ export interface UpdateUserReq {
   disabled?: boolean
   password?: string
 }
+
+/** Why browser push cannot be offered on this instance. */
+export type PushUnavailableReason = 'no_public_url' | 'insecure_origin' | 'no_master_key' | 'key_unreadable'
+
+/** GET /push: whether the instance can send browser push at all. */
+export interface PushStatus {
+  available: boolean
+  reason?: PushUnavailableReason
+  /** VAPID public key (base64url) the browser subscribes with. */
+  public_key?: string
+}
+
+/** One browser that receives the caller's push notifications. */
+export interface PushDevice {
+  id: number
+  endpoint: string
+  /** Push service host: fcm.googleapis.com, web.push.apple.com, … */
+  service: string
+  user_agent: string
+  created_at: string
+  last_success_at?: string
+  last_error?: string
+  fail_count: number
+}
+
+/** PushSubscription.toJSON() as the browser produces it. */
+export interface PushSubscriptionJSONBody {
+  endpoint: string
+  keys: { p256dh: string; auth: string }
+}

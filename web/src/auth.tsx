@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { ApiClient } from './api/client'
 import type { Me, Role } from './api/types'
+import { disablePush } from './push'
 
 const TOKEN_KEY = 'duskrun.token'
 
@@ -73,11 +74,22 @@ export function AuthProvider({
   // logout ends the server-side session too. The static API token has no
   // session, and a failing call must not trap the user in the app, so the local
   // credential is cleared either way.
+  //
+  // Signing out also stops push to this browser: whoever signs out is saying
+  // the browser is not theirs to use, and backup alerts must not keep arriving
+  // on it. That call needs the session, so it goes first, on a client bound to
+  // the token being dropped — the shared one reads localStorage, which is
+  // cleared right away so the UI does not wait on the network.
   const logout = useCallback(() => {
     const had = localStorage.getItem(TOKEN_KEY)
-    if (had) void api.logout().catch(() => undefined)
+    if (had) {
+      const bound = new ApiClient({ getToken: () => had, fetchImpl })
+      void disablePush(bound)
+        .catch(() => undefined)
+        .finally(() => bound.logout().catch(() => undefined))
+    }
     clearToken()
-  }, [api, clearToken])
+  }, [clearToken, fetchImpl])
 
   const refreshMe = useCallback(() => setMeEpoch((n) => n + 1), [])
 

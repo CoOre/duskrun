@@ -15,6 +15,9 @@ import type {
   MFAStatus,
   Passkey,
   PublicKeyOptionsJSON,
+  PushDevice,
+  PushStatus,
+  PushSubscriptionJSONBody,
   Notification,
   NotifierChannel,
   NotifierTestResult,
@@ -245,6 +248,33 @@ export class ApiClient {
 
   testNotifier(id: number): Promise<NotifierTestResult> {
     return this.post(`/notifiers/${id}/test`, {})
+  }
+
+  // Browser push ---------------------------------------------------------
+
+  pushStatus(): Promise<PushStatus> {
+    return this.get('/push')
+  }
+
+  listPushDevices(): Promise<PushDevice[]> {
+    return this.get('/push/subscriptions')
+  }
+
+  subscribePush(sub: PushSubscriptionJSONBody): Promise<{ id: number }> {
+    return this.post('/push/subscriptions', sub)
+  }
+
+  /** Drops this browser's subscription; the endpoint travels in the body, not the URL. */
+  unsubscribePush(endpoint: string): Promise<void> {
+    return this.post('/push/unsubscribe', { endpoint })
+  }
+
+  deletePushDevice(id: number): Promise<void> {
+    return this.request('DELETE', `/push/subscriptions/${id}`)
+  }
+
+  testPushDevice(id: number): Promise<void> {
+    return this.post(`/push/subscriptions/${id}/test`, {})
   }
 
   listNotifications(limit?: number): Promise<Notification[]> {

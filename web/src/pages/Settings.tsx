@@ -7,6 +7,7 @@ import { useAuth, useCan } from '../auth'
 import { Layout } from '../ui/Layout'
 import { MFASettings } from '../ui/MFASettings'
 import { ModalShell } from '../ui/ModalShell'
+import { PushSettings } from '../ui/PushSettings'
 import { MONO, btnDanger, btnPrimary, btnSecondary, inputStyle, labelStyle } from '../ui/dc'
 
 type Data = { settings: SettingsData; users: User[]; sessions: Session[] }
@@ -278,6 +279,13 @@ export default function Settings() {
             <>
               <div style={SECTION}>Двухфакторная аутентификация</div>
               <MFASettings onChange={() => { refreshMe(); bump() }} />
+            </>
+          )}
+
+          {me && !me.static && (
+            <>
+              <div style={SECTION}>Уведомления в браузере</div>
+              <PushSettings />
             </>
           )}
 

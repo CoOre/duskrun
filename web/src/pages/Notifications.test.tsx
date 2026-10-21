@@ -222,3 +222,37 @@ test('TestNotificationsEmptyStateIsHonest: no channels means nothing is delivere
   expect(await screen.findByText(/Каналов пока нет/)).toBeInTheDocument()
   expect(screen.getByText('Отправок пока не было.')).toBeInTheDocument()
 })
+
+test('TestNotificationsCreatesPushChannel: the audience becomes min_role', async () => {
+  const user = userEvent.setup()
+  const fetchImpl = makeFetch(routes({
+    'GET /api/push': { available: true, public_key: 'BKEY' },
+    'POST /api/notifiers': { id: 3 },
+  }))
+  renderWithAuth(<Notifications />, { fetchImpl })
+
+  await user.click(await screen.findByRole('button', { name: /Канал/ }))
+  await user.click(screen.getByText('Браузер'))
+  await user.type(screen.getByLabelText('Название'), 'browsers')
+  await user.selectOptions(screen.getByLabelText('Получатели'), 'operator')
+  await user.click(screen.getByRole('button', { name: 'Создать' }))
+
+  const post = fetchImpl.calls().find(([url, init]) => url === '/api/notifiers' && init?.method === 'POST')
+  expect(post).toBeDefined()
+  const body = JSON.parse(post![1].body as string)
+  expect(body.type).toBe('push')
+  expect(body.config).toEqual({ min_role: 'operator' })
+})
+
+test('TestNotificationsPushUnavailable: the form says why and will not save', async () => {
+  const user = userEvent.setup()
+  renderWithAuth(<Notifications />, {
+    fetchImpl: makeFetch(routes({ 'GET /api/push': { available: false, reason: 'insecure_origin' } })),
+  })
+
+  await user.click(await screen.findByRole('button', { name: /Канал/ }))
+  await user.click(screen.getByText('Браузер'))
+  expect(await screen.findByText(/Push недоступен на этом инстансе/)).toBeInTheDocument()
+  expect(screen.getByText(/https:\/\//)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Создать' })).toBeDisabled()
+})
