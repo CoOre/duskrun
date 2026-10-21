@@ -134,6 +134,14 @@ type CapacityReporter interface {
 	Capacity(ctx context.Context) (Capacity, error)
 }
 
+// Prober is implemented by a Storage that can check it is reachable — the
+// host answers, the credentials work — without writing or listing anything.
+// The storage monitor uses it to report a destination that went away before
+// tonight's backup finds out.
+type Prober interface {
+	Probe(ctx context.Context) error
+}
+
 // Event is what a run reports to the Notifier channels.
 type Event struct {
 	Kind    EventKind

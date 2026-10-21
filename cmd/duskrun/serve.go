@@ -109,6 +109,11 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 	// The watchdog is what turns "the backup silently stopped happening" into a
 	// notification instead of something nobody notices until a restore.
 	watchdog := core.NewWatchdog(st, core.WatchdogConfig{Now: time.Now, Notify: notes}, log)
+	// The monitor covers what no single run reports: a run hanging far past
+	// its usual time, a storage that stopped answering or is filling up.
+	monitor := core.NewMonitor(st, core.MonitorConfig{
+		Now: time.Now, Notify: notes, Secrets: core.NewSecretResolver(st, box),
+	}, log)
 
 	// The HTTP surface is the API router: /healthz (public), token-guarded /api/*,
 	// and the embedded SPA with client-routing fallback — all on one listener.
@@ -144,6 +149,7 @@ func cmdServe(cfg *config.Config, log *slog.Logger) error {
 		Sweeper:       sweeper,
 		RetentionCron: cfg.RetentionCron,
 		Watchdog:      watchdog,
+		Monitor:       monitor,
 	}, log)
 
 	return eng.Run(ctx)
