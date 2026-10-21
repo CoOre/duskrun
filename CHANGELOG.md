@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/CoOre/duskrun/compare/v0.3.0...v0.4.0) (2026-10-21)
+
+
+### Новое
+
+* **web:** адаптивная вёрстка для планшетов и телефонов ([4273e35](https://github.com/CoOre/duskrun/commit/4273e353aebef30a533d8188bdd8fcd0b9cf37ec))
+* браузерные push-уведомления, новые события и мобильная вёрстка ([ed5be2d](https://github.com/CoOre/duskrun/commit/ed5be2dc803f297d1d08d4a93ac5edeaef1b6b1c))
+
 ## [0.3.0](https://github.com/CoOre/duskrun/compare/v0.2.0...v0.3.0) (2026-10-21)
 
 
