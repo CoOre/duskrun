@@ -34,6 +34,7 @@ services:
       DUSKRUN_LOG_FORMAT: "${DUSKRUN_LOG_FORMAT:-json}"
       DUSKRUN_API_TOKEN: "${DUSKRUN_API_TOKEN:?set DUSKRUN_API_TOKEN in .env}"
       DUSKRUN_TRUSTED_PROXY: "${DUSKRUN_TRUSTED_PROXY:-false}"
+      DUSKRUN_PUBLIC_URL: "${DUSKRUN_PUBLIC_URL:-}"
       # Master key: inline from .env (simple) OR mount a file and use
       # DUSKRUN_MASTER_KEY_FILE instead (see the commented secret below).
       DUSKRUN_MASTER_KEY: "${DUSKRUN_MASTER_KEY:?set DUSKRUN_MASTER_KEY in .env}"
