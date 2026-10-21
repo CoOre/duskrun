@@ -7,6 +7,8 @@
 // the server sends it with Cache-Control: no-cache so an update is picked up on
 // the next visit.
 
+// Fallback titles for a payload without one. The server renders the title
+// itself (plugin.Title) so every channel words an event the same way.
 const TITLES = {
   failure: (task) => `✗ ${task}: бэкап не выполнен`,
   success: (task) => `✓ ${task}: бэкап выполнен`,
@@ -14,9 +16,9 @@ const TITLES = {
   watchdog: (task) => `⚠ ${task}: watchdog`,
 }
 
-// Anything other than a routine success is worth keeping on screen until the
-// operator has seen it.
-const QUIET = new Set(['success', 'test'])
+// Without the server's urgency flag: anything other than a routine success is
+// worth keeping on screen until the operator has seen it.
+const QUIET = new Set(['success', 'test', 'recovered', 'retention_done'])
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))
@@ -32,13 +34,15 @@ function parse(data) {
 
 self.addEventListener('push', (event) => {
   const p = parse(event.data)
+  const about = p.task || p.subject || ''
   const title =
-    p.kind === 'test'
+    p.title ||
+    (p.kind === 'test'
       ? 'Duskrun: тестовое уведомление'
       : TITLES[p.kind]
-        ? TITLES[p.kind](p.task || 'Duskrun')
-        : 'Duskrun'
-  const urgent = !QUIET.has(p.kind)
+        ? TITLES[p.kind](about || 'Duskrun')
+        : 'Duskrun')
+  const urgent = typeof p.urgent === 'boolean' ? p.urgent : !QUIET.has(p.kind)
   const options = {
     body: p.message || '',
     icon: '/icon-192.png',
@@ -47,10 +51,11 @@ self.addEventListener('push', (event) => {
     timestamp: p.at ? Date.parse(p.at) : Date.now(),
     data: { url: p.url || '/' },
   }
-  if (p.task) {
-    // One notification per task and kind: a retried failure replaces the
-    // previous one instead of stacking, and still alerts again.
-    options.tag = `${p.kind}:${p.task}`
+  if (about) {
+    // One notification per task (or storage, or user) and kind: a retried
+    // failure replaces the previous one instead of stacking, and still alerts
+    // again.
+    options.tag = `${p.kind}:${about}`
     options.renotify = urgent
   }
   event.waitUntil(self.registration.showNotification(title, options))

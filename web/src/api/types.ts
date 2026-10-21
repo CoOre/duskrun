@@ -110,7 +110,19 @@ export interface WatchdogAlert {
   reason: string
 }
 
-export type EventKind = 'success' | 'failure' | 'retention_error' | 'watchdog'
+export type EventKind =
+  | 'success'
+  | 'failure'
+  | 'recovered'
+  | 'size_anomaly'
+  | 'slow_run'
+  | 'interrupted'
+  | 'retention_done'
+  | 'retention_error'
+  | 'watchdog'
+  | 'storage_low'
+  | 'storage_unreachable'
+  | 'security'
 
 // NotifierChannel is a configured delivery channel — see handlers_notifier.go.
 // `events` is the set of kinds it forwards; empty means it delivers nothing.

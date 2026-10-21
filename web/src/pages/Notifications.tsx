@@ -35,13 +35,46 @@ const TLS_MODES: { k: string; label: string }[] = [
   { k: 'none', label: 'Без шифрования (порт 25)' },
 ]
 
-// The event kinds a channel can subscribe to, in the order the matrix shows.
-const EVENTS: { k: EventKind; label: string; dot: string }[] = [
-  { k: 'success', label: 'Успешный бэкап', dot: 'var(--ok)' },
-  { k: 'failure', label: 'Ошибка бэкапа', dot: 'var(--err)' },
-  { k: 'retention_error', label: 'Ошибка retention', dot: 'var(--warn)' },
-  { k: 'watchdog', label: 'Watchdog: нет свежего бэкапа', dot: 'var(--warn)' },
+type EventInfo = { k: EventKind; label: string; dot: string; hint?: string }
+
+// The event kinds a channel can subscribe to, grouped and in the order the
+// matrix shows them (internal/plugin/events.go is the server's list).
+const EVENT_GROUPS: { title: string; events: EventInfo[] }[] = [
+  {
+    title: 'Бэкапы',
+    events: [
+      { k: 'success', label: 'Успешный бэкап', dot: 'var(--ok)' },
+      { k: 'failure', label: 'Ошибка бэкапа', dot: 'var(--err)' },
+      { k: 'recovered', label: 'Снова в порядке', dot: 'var(--ok)', hint: 'после сбоя, watchdog или проблем с хранилищем' },
+      { k: 'size_anomaly', label: 'Подозрительно маленький бэкап', dot: 'var(--warn)', hint: 'меньше половины обычного размера' },
+      { k: 'slow_run', label: 'Бэкап идёт дольше обычного', dot: 'var(--warn)', hint: 'в 3 раза дольше обычного и минимум на 15 минут' },
+      { k: 'interrupted', label: 'Бэкап прерван перезапуском', dot: 'var(--err)' },
+    ],
+  },
+  {
+    title: 'Контроль и ротация',
+    events: [
+      { k: 'watchdog', label: 'Watchdog: нет свежего бэкапа', dot: 'var(--warn)' },
+      { k: 'retention_error', label: 'Ошибка ротации', dot: 'var(--warn)' },
+      { k: 'retention_done', label: 'Ротация: удалены старые бэкапы', dot: 'var(--ink-3)', hint: 'необязательное, по каждой задаче' },
+    ],
+  },
+  {
+    title: 'Хранилища',
+    events: [
+      { k: 'storage_low', label: 'Заканчивается место', dot: 'var(--warn)', hint: 'меньше 10% или места меньше чем на 3 бэкапа' },
+      { k: 'storage_unreachable', label: 'Хранилище недоступно', dot: 'var(--err)', hint: 'не отвечает две проверки подряд' },
+    ],
+  },
+  {
+    title: 'Безопасность',
+    events: [
+      { k: 'security', label: 'Входы, 2FA и пользователи', dot: 'var(--err)', hint: 'новое устройство, блокировка входа, отключение 2FA, изменения учётных записей' },
+    ],
+  },
 ]
+
+const EVENTS: EventInfo[] = EVENT_GROUPS.flatMap((g) => g.events)
 
 type Data = { channels: NotifierChannel[]; log: Notification[] }
 
@@ -173,19 +206,29 @@ export default function Notifications() {
               <div>СОБЫТИЕ</div>
               {channels.map((c) => <div key={c.id} style={{ textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name.toUpperCase()}</div>)}
             </div>
-            {EVENTS.map((ev) => (
-              <div key={ev.k} style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '13px 20px', borderBottom: '1px solid var(--line)', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: ev.dot }} />
-                  <span style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 500 }}>{ev.label}</span>
+            {EVENT_GROUPS.map((g) => (
+              <div key={g.title}>
+                <div style={{ padding: '9px 20px', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', color: 'var(--ink-3)', fontFamily: MONO, background: 'var(--panel-2)', borderBottom: '1px solid var(--line)' }}>
+                  {g.title.toUpperCase()}
                 </div>
-                {channels.map((c) => (
-                  <div key={c.id} style={{ display: 'flex', justifyContent: 'center' }}>
-                    <Toggle
-                      on={c.events.includes(ev.k)}
-                      label={`${ev.label} → ${c.name}`}
-                      onClick={() => patch(c, { events: toggleEvent(c.events, ev.k) })}
-                    />
+                {g.events.map((ev) => (
+                  <div key={ev.k} style={{ display: 'grid', gridTemplateColumns: matrixCols(channels.length), padding: '11px 20px', borderBottom: '1px solid var(--line)', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: ev.dot, flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 500 }}>{ev.label}</div>
+                        {ev.hint && <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>{ev.hint}</div>}
+                      </div>
+                    </div>
+                    {channels.map((c) => (
+                      <div key={c.id} style={{ display: 'flex', justifyContent: 'center' }}>
+                        <Toggle
+                          on={c.events.includes(ev.k)}
+                          label={`${ev.label} → ${c.name}`}
+                          onClick={() => patch(c, { events: toggleEvent(c.events, ev.k) })}
+                        />
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
