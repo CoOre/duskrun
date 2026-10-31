@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.1](https://github.com/CoOre/duskrun/compare/v0.4.0...v0.4.1) (2026-10-31)
+
+
+### Исправления
+
+* **deps:** bump the go group across 1 directory with 11 updates ([e4c312a](https://github.com/CoOre/duskrun/commit/e4c312a942c618d0f385fff045bc6ab4c17f5190))
+* **deps:** bump the go group across 1 directory with 11 updates ([5190638](https://github.com/CoOre/duskrun/commit/5190638c4ce2481325016e48273b671048218fb5))
+* **deps:** React 19, react-router 7, Vite 8, Vitest 5, TypeScript 7 ([d69066c](https://github.com/CoOre/duskrun/commit/d69066c4de3da389138895d44ebb97c8d0478dc8))
+* **deps:** переход на Node 24 LTS для сборки веба ([7b3ee5f](https://github.com/CoOre/duskrun/commit/7b3ee5f3ecac812493a207a4418910b37a2371d8))
+
 ## [0.4.0](https://github.com/CoOre/duskrun/compare/v0.3.0...v0.4.0) (2026-10-21)
 
 
