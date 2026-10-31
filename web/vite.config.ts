@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const outDir = resolve(__dirname, '../internal/web/dist')
+const outDir = resolve(import.meta.dirname, '../internal/web/dist')
 
 // emptyOutDir wipes the tracked dist/.gitkeep that lets `go:embed all:dist`
 // compile in a fresh clone without Node. Put it back after every build so the

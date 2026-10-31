@@ -149,8 +149,9 @@ test('TestLastAdminConflictSurfaces: a 409 from the server is shown, not swallow
   }))
   renderWithAuth(<Settings />, { fetchImpl: fetch })
 
-  await screen.findByText('admin@corp.io')
-  await user.click(screen.getAllByRole('button', { name: 'Удалить' })[0])
+  // Wait for the button itself: admin@corp.io also shows up in the sessions
+  // table, which can render before the user table's second pass.
+  await user.click((await screen.findAllByRole('button', { name: 'Удалить' }))[0])
 
   expect(await screen.findByRole('alert')).toHaveTextContent(/without an enabled admin/i)
 })
